@@ -211,10 +211,10 @@ void Server::Select()
 
         assert(_Current_Client_Fd != -1);
 
-        cout << "New Client Connected To Server\n" ;
+        cout << "New Connection Established With Server on Port " << Get_Client_Port() << "\n" ;
 
         //Sending Welcome Message to Newly Connected Client
-        string message = "You have been Successfully Connected to Server";
+        string message = "OK";
         Send(message);
 
         //add new socket to client sockets
