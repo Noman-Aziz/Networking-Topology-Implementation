@@ -90,7 +90,13 @@ class Server
         void Listen(int = 1);
 
         //For Concurrent Tcp Requests
-        void Select();
+        int Select();
+
+        //Returns Server IP Address
+        string Get_Server_IP() ;
+
+        //Returns Server Port
+        string Get_Server_Port() ;
 
     //UTILITY FUNCTIONS
     public:

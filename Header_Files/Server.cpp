@@ -195,7 +195,7 @@ void Server::Add_Child_FDs()
     }
 }
 
-void Server::Select()
+int Server::Select()
 {
     Clear_Socket_Set();
     Add_Master_Socket();
@@ -211,9 +211,9 @@ void Server::Select()
 
         assert(_Current_Client_Fd != -1);
 
-        cout << "New Connection Established With Server on Port " << Get_Client_Port() << "\n" ;
+        cout << "New Connection Established With Server on Client Port " << Get_Client_Port() << "\n" ;
 
-        //Sending Welcome Message to Newly Connected Client
+        //Sending OK Message to Newly Connected Client
         string message = "OK";
         Send(message);
 
@@ -227,7 +227,17 @@ void Server::Select()
                 break;
             }
         }
+
+        //returns 0 which means that new client has been connected
+        return 0 ;
     }
+
+    else
+    {
+        //return 1 which means that old client has connected back
+        return -1;
+    }
+    
 }
 
 int Server::Get_Client_FD(int index)
@@ -250,4 +260,14 @@ int Server::Get_Max_Clients()
 bool Server::Check_FD_Set(int client)
 {
     return FD_ISSET( client, &_Readfd  ) ;
+}
+
+string Server::Get_Server_IP()
+{
+    return _Server_Ip ;
+}
+
+string Server::Get_Server_Port()
+{
+    return to_string(_Port_No);
 }

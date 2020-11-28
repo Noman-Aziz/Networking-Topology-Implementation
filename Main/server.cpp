@@ -1,5 +1,6 @@
- #include "../Header_Files/Server.h"
+#include "../Header_Files/Server.h"
 #include "../Header_Files/Client.h"
+#include "../Header_Files/RoutingTable.h"
 
 using namespace std;
 
@@ -66,22 +67,29 @@ void Connect_To_Proxy_Server(Client * C)
     cout << "Proxy Server Connection Response : " << C->Receive() << "\n" ;
 }
 
-int main()
+void Add_To_Routing_Table(Server * S, Client * C, RoutingTable * R)
 {
-    Server * S = Setup_Server_Connection();
-    Client * C = Setup_Client_Connection();
+    //generate a message to send to proxy server
+    string rtr_message = "0" + to_string(S->Get_Client_Port()) + " " + S->Get_Server_IP() + " " + S->Get_Server_Port() ;
 
-    //Establishing Initial Connection with Proxy Server
-    Connect_To_Proxy_Server(C);
+    
+}
 
-    /*
+void Wait_For_Connection(Server * S, Client * C, RoutingTable * R)
+{
     int Temp_sd;
     string response, message;
     int max_clients = S->Get_Max_Clients() ;
 
+    int ret_val ;
+
     while(1)
     {
-        S->Select();
+        ret_val = S->Select();
+
+        //new client has been connected so add it to routing table
+        if (ret_val == 0)
+            Add_To_Routing_Table(S,C,R);
 
         //checking if existing client sent message
         for(int i=0 ; i< max_clients ; i++)
@@ -104,7 +112,19 @@ int main()
             }
         }
     }
-    */
+}
+
+int main()
+{
+    Server * S = Setup_Server_Connection();
+    Client * C = Setup_Client_Connection();
+    RoutingTable R ;
+
+    //Establishing Initial Connection with Proxy Server
+    Connect_To_Proxy_Server(C);
+
+    //Waiting For Connections With Client
+    Wait_For_Connection(S,C,&R);
 
     //Deallocating Memory
     delete S ;
