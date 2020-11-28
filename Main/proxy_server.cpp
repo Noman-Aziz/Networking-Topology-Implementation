@@ -44,10 +44,16 @@ int main()
                 //if(response == "exit")
                 //    continue;
 
-                //cout << "Server : " ;
-                //message = "OK";
+                cout << response << endl;
 
-                //S->Send(message, Temp_sd);
+                //cout << "Server : " ;
+                message = "BOOGA BOOGA BOOGA";
+
+                sleep(10);
+
+                cout << "IM BACK\n";
+
+                S->Send(message, Temp_sd);
 
                 continue;
             }

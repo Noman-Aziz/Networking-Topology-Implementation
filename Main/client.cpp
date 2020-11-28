@@ -1,10 +1,60 @@
 #include "../Header_Files/Client.h"
-#include <signal.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <cstdlib>
+
+#include <pthread.h>
 
 using namespace std;
+
+//GLOBAL VARIABLES
+Client *C ;
+
+//FUNCTION PROTOTYPES
+Client *Setup_Client_Connection();
+void * Receive_Messages(void *);
+void Send_Messages();
+
+int main()
+{
+    C = Setup_Client_Connection();
+
+    pthread_t thread1 ;
+    pthread_create(&thread1, NULL, Receive_Messages, NULL);
+
+    Send_Messages() ;
+
+    return 0;
+}
+
+void * Receive_Messages(void * args)
+{
+    bool first = true;
+
+    for (;;)
+    {
+        //server connection message
+        if (first)
+        {
+            first = false;
+            cout << "Server Connection Response : " ;
+        }
+
+        string rec = C->Receive();
+        cout << rec << endl;
+    }
+}
+
+void Send_Messages()
+{
+    while(1)
+    {
+        string msg;
+        getline(cin, msg);
+        C->Send(msg);
+        if (msg == "exit")
+        {
+            return ;
+        }
+    }
+}
 
 Client *Setup_Client_Connection()
 {
@@ -48,68 +98,4 @@ Client *Setup_Client_Connection()
     C->Connect();
 
     return C;
-}
-
-int main()
-{
-
-    Client *C = Setup_Client_Connection();
-
-    bool ex = false;
-
-    pid_t pid1 = fork();
-    pid_t pid2;
-
-    //child process sending messages
-    if (pid1 == 0)
-    {
-        for (;;)
-        {
-            string msg;
-            getline(cin, msg);
-            C->Send(msg);
-            if (msg == "exit")
-            {
-                exit(0);
-            }
-        }
-    }
-
-    //parent process receiving messages
-    if (pid1 > 0)
-    {
-        pid2 = fork();
-
-        if (pid2 == 0)
-        {
-            bool first = true;
-            for (;;)
-            {
-                //server connection message
-                if (first)
-                {
-                    first = false;
-                    cout << "Server Connection Response : " ;
-                }
-
-                string rec = C->Receive();
-                cout << rec << endl;
-
-                if (ex)
-                {
-                    exit(0);
-                }
-            }
-        }
-    }
-
-    //waiting for sending messages to end
-    int p = (int)pid1;
-    wait(&p);
-
-    //killing all child processes
-    kill(pid2, SIGKILL);
-
-    //wait(NULL);
-    exit(0);
 }

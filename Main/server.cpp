@@ -2,7 +2,46 @@
 #include "../Header_Files/Client.h"
 #include "../Header_Files/RoutingTable.h"
 
+#include <pthread.h>
+
 using namespace std;
+
+//GLOBAL VARIABLES
+bool Mutex = false;
+Client * C ;
+RoutingTable R ;
+Server * S ;
+
+//FUNCTION PROTOTYPES
+Server *Setup_Server_Connection();
+Client *Setup_Client_Connection();
+void Connect_To_Proxy_Server();
+void Add_To_Routing_Table();
+void * Rec_From_Proxy_Server(void * args);
+void Wait_For_Connection();
+
+int main()
+{
+    C = Setup_Client_Connection();
+
+    //Establishing Initial Connection with Proxy Server
+    Connect_To_Proxy_Server();
+
+    //Receive Calls from Proxy Server
+    pthread_t thread1 ;
+    pthread_create(&thread1, NULL, Rec_From_Proxy_Server, NULL);
+
+    S = Setup_Server_Connection();
+
+    //Waiting For Connections With Client
+    Wait_For_Connection();
+
+    //Deallocating Memory
+    delete S ;
+    delete C ;
+
+    return 0 ;
+}
 
 Server *Setup_Server_Connection()
 {
@@ -60,22 +99,41 @@ Client *Setup_Client_Connection()
     return C;
 }
 
-void Connect_To_Proxy_Server(Client * C)
+void Connect_To_Proxy_Server()
 {
     string opener = "";
     C->Send(opener);
     cout << "Proxy Server Connection Response : " << C->Receive() << "\n" ;
 }
 
-void Add_To_Routing_Table(Server * S, Client * C, RoutingTable * R)
+void Add_To_Routing_Table()
 {
     //generate a message to send to proxy server
     string rtr_message = "0" + to_string(S->Get_Client_Port()) + " " + S->Get_Server_IP() + " " + S->Get_Server_Port() ;
 
-    
+    C->Send(rtr_message) ;
 }
 
-void Wait_For_Connection(Server * S, Client * C, RoutingTable * R)
+//Thread To Receive Messages from Proxy Server
+void * Rec_From_Proxy_Server(void * args)
+{
+    while(1)
+    {
+        //Wait for Receive From Proxy Server
+        string message = C->Receive() ;
+
+        //Proxy Server is in Contact, Aqquire Lock
+        Mutex = true;
+
+        //DO WORK
+        cout << message << endl;
+
+        //Release Lock
+        Mutex = false;
+    }
+}
+
+void Wait_For_Connection()
 {
     int Temp_sd;
     string response, message;
@@ -85,15 +143,23 @@ void Wait_For_Connection(Server * S, Client * C, RoutingTable * R)
 
     while(1)
     {
+        //Lock is Not Aqquired
+        while(Mutex)
+        {}
+
         ret_val = S->Select();
 
         //new client has been connected so add it to routing table
         if (ret_val == 0)
-            Add_To_Routing_Table(S,C,R);
+            Add_To_Routing_Table();
 
         //checking if existing client sent message
         for(int i=0 ; i< max_clients ; i++)
         {
+            //Lock is Not Aqquired
+            while(Mutex)
+            {}
+
             Temp_sd = S->Get_Client_FD(i) ;
 
             if (S->Check_FD_Set(Temp_sd))
@@ -112,23 +178,4 @@ void Wait_For_Connection(Server * S, Client * C, RoutingTable * R)
             }
         }
     }
-}
-
-int main()
-{
-    Server * S = Setup_Server_Connection();
-    Client * C = Setup_Client_Connection();
-    RoutingTable R ;
-
-    //Establishing Initial Connection with Proxy Server
-    Connect_To_Proxy_Server(C);
-
-    //Waiting For Connections With Client
-    Wait_For_Connection(S,C,&R);
-
-    //Deallocating Memory
-    delete S ;
-    delete C ;
-
-    return 0 ;
 }
