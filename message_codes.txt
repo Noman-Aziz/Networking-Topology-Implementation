@@ -1,0 +1,1 @@
+0 - add to routing table (sent from servers to proxyserver and to other servers)
