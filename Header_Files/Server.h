@@ -89,8 +89,11 @@ class Server
         //Listening on Socket For Tcp Connections, Parameter is Maximum No of Users That Can Connect to Server (Default 1)
         void Listen(int = 1);
 
-        //For Concurrent Tcp Requests
-        int Select();
+        //For Concurrent Tcp Requests, Parameter is TimeoutValue (0 for Infinite Wait)
+        //Returns 0 For New Connection
+        //Returns 1 For Old Connection
+        //Returns 2 For Timeout on Socket
+        int Select(int);
 
         //Returns Server IP Address
         string Get_Server_IP() ;

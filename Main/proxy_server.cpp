@@ -3,6 +3,65 @@
 
 using namespace std;
 
+//Function Prototypes
+Server *Setup_Server_Connection();
+void Send_Broadcast_Message(Server *, string, int);
+
+int main()
+{
+    Server * S = Setup_Server_Connection();
+    RoutingTable R ;
+
+    int Temp_sd;
+    string response, message;
+    int max_clients = S->Get_Max_Clients() ;
+
+    while(1)
+    {
+        S->Select(0);
+
+        //checking if existing client sent message
+        for(int i=0 ; i< max_clients ; i++)
+        {
+            Temp_sd = S->Get_Client_FD(i) ;
+
+            if (S->Check_FD_Set(Temp_sd))
+            {                 
+                response = S->Receive(Temp_sd, i) ;
+
+                //only one message and response with one client
+                //if(response == "exit")
+                //    continue;
+
+                //cout << response << endl;
+
+                //Checking Message Type and Acting Accordingly
+
+                //Broadcast Add to RoutingTable Message
+                if (response[0] == '0')
+                {
+                    //Send Message to Other Servers
+                    Send_Broadcast_Message(S, response, i) ;
+                
+                    //Add to Own Routing Table
+                    R.Add_To_Routing_Table(response.erase(0,1), false);
+                
+                    cout << "Received Broadcast Message From Server : " << response << "\n" ;
+                }
+
+                //S->Send(message, Temp_sd);
+
+                continue;
+            }
+        }
+    }
+
+    //Deallocating Memory
+    delete S ;
+
+    return 0 ;
+}
+
 Server *Setup_Server_Connection()
 {
     Server *S = new Server(5);
@@ -19,49 +78,21 @@ Server *Setup_Server_Connection()
     return S;
 }
 
-int main()
+void Send_Broadcast_Message(Server * S, string message, int Sender_Index)
 {
-    Server * S = Setup_Server_Connection();
-
-    int Temp_sd;
-    string response, message;
     int max_clients = S->Get_Max_Clients() ;
+    int Temp_sd;
 
-    while(1)
+    for(int i=0 ; i<max_clients ; i++)
     {
-        S->Select();
+        if (i == Sender_Index)
+            continue;
 
-        //checking if existing client sent message
-        for(int i=0 ; i< max_clients ; i++)
-        {
-            Temp_sd = S->Get_Client_FD(i) ;
+        Temp_sd = S->Get_Client_FD(i) ;
 
-            if (S->Check_FD_Set(Temp_sd))
-            {                 
-                response = S->Receive(Temp_sd, i) ;
-
-                //only one message and response with one client
-                //if(response == "exit")
-                //    continue;
-
-                cout << response << endl;
-
-                //cout << "Server : " ;
-                message = "BOOGA BOOGA BOOGA";
-
-                sleep(10);
-
-                cout << "IM BACK\n";
-
-                S->Send(message, Temp_sd);
-
-                continue;
-            }
+        if (Temp_sd != 0)
+        {                 
+            S->Send(message, Temp_sd);
         }
     }
-
-    //Deallocating Memory
-    delete S ;
-
-    return 0 ;
 }

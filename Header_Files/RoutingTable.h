@@ -13,13 +13,14 @@ class RoutingTable
         vector<string> _Client_Port ;
         vector<string> _Server_IP ;
         vector<string> _Server_Port ;
+        vector<bool> _Directly_Connected ;
 
     public:
 
         RoutingTable();
 
-        //Parameter is "Client_Port Server_Ip Server_Port"
-        void Add_To_Routing_Table(string);
+        //Parameter is "Client_Port Server_Ip Server_Port", is Client Directly Connected
+        void Add_To_Routing_Table(string, bool);
 
         //Parameter is "Client_Port"
         void Delete_From_Routing_Table(string);     

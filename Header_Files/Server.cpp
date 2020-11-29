@@ -195,14 +195,32 @@ void Server::Add_Child_FDs()
     }
 }
 
-int Server::Select()
+int Server::Select(int timeoutval)
 {
     Clear_Socket_Set();
     Add_Master_Socket();
     Add_Child_FDs();
 
-    //Wait Infinitely For New Connection
-    assert( select( _Max_Sd + 1, &_Readfd, NULL, NULL, NULL ) != -1 ) ;
+    assert(timeoutval >= 0) ;
+
+    int ret_val ;
+
+    //Wait For New Connection Infinitely
+    if(timeoutval == 0)
+        ret_val = select( _Max_Sd + 1, &_Readfd, NULL, NULL, NULL ) ;
+    else
+    {
+        struct timeval selTimeout;
+        selTimeout.tv_sec = timeoutval;
+        selTimeout.tv_usec = 0;
+        ret_val = select( _Max_Sd + 1, &_Readfd, NULL, NULL, &selTimeout ) ;
+    }
+    
+    assert(ret_val != -1) ;
+
+    //2 Return Value Means Timeout Occured
+    if(ret_val == 0)
+        return 2 ;
 
     //checking if new connection on master socket
     if(FD_ISSET( _Master_Socket, &_Readfd ))
@@ -235,7 +253,7 @@ int Server::Select()
     else
     {
         //return 1 which means that old client has connected back
-        return -1;
+        return 1;
     }
     
 }

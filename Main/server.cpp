@@ -109,7 +109,12 @@ void Connect_To_Proxy_Server()
 void Add_To_Routing_Table()
 {
     //generate a message to send to proxy server
-    string rtr_message = "0" + to_string(S->Get_Client_Port()) + " " + S->Get_Server_IP() + " " + S->Get_Server_Port() ;
+    string code = "0" ;
+    string message = to_string(S->Get_Client_Port()) + " " + S->Get_Server_IP() + " " + S->Get_Server_Port() ;
+    string rtr_message = code + message ;
+
+    //Adding to Own RoutingTable
+    R.Add_To_Routing_Table(message, true) ;
 
     C->Send(rtr_message) ;
 }
@@ -124,9 +129,15 @@ void * Rec_From_Proxy_Server(void * args)
 
         //Proxy Server is in Contact, Aqquire Lock
         Mutex = true;
-
-        //DO WORK
-        cout << message << endl;
+        
+        //Checking Message Type and Applying Appropiate Operation
+        
+        //Broadcast Add to RoutingTable Msg
+        if (message[0] == '0')
+        {
+            R.Add_To_Routing_Table(message.erase(0,1), false) ;
+            cout << "Received Broadcase Message from ProxyServer\nAdded an Entry to Routing Table : " << message << endl;
+        }    
 
         //Release Lock
         Mutex = false;
@@ -145,21 +156,25 @@ void Wait_For_Connection()
     {
         //Lock is Not Aqquired
         while(Mutex)
-        {}
+        {
+            cout << "IM SLEEPING\n";
+        }
 
-        ret_val = S->Select();
+        ret_val = S->Select(2);
 
         //new client has been connected so add it to routing table
         if (ret_val == 0)
             Add_To_Routing_Table();
+        //Timeout Occured on Select
+        else if (ret_val == 2)
+        {
+            //cout << "TIMEOUT OCCURED\n";
+            continue;
+        }
 
         //checking if existing client sent message
         for(int i=0 ; i< max_clients ; i++)
         {
-            //Lock is Not Aqquired
-            while(Mutex)
-            {}
-
             Temp_sd = S->Get_Client_FD(i) ;
 
             if (S->Check_FD_Set(Temp_sd))

@@ -2,7 +2,7 @@
 
 RoutingTable::RoutingTable(){}
 
-void RoutingTable::Add_To_Routing_Table(string data)
+void RoutingTable::Add_To_Routing_Table(string data, bool directlycon)
 {
     //split around spaces
     istringstream ss(data);
@@ -17,6 +17,8 @@ void RoutingTable::Add_To_Routing_Table(string data)
 
     ss >> temp ;
     _Server_Port.push_back(temp);
+
+    _Directly_Connected.push_back(directlycon);
 }
 
 void RoutingTable::Delete_From_Routing_Table(string port)
@@ -33,6 +35,9 @@ void RoutingTable::Delete_From_Routing_Table(string port)
 
             auto itr3 = _Server_Port.begin() + i ;
             _Server_Port.erase(itr3) ;
+
+            auto itr4 = _Directly_Connected.begin() + i ;
+            _Directly_Connected.erase(itr4) ;
 
             break;
         }
