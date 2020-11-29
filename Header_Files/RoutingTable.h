@@ -24,6 +24,9 @@ class RoutingTable
 
         //Parameter is "Client_Port"
         void Delete_From_Routing_Table(string);     
+
+        //Returns Routing Table
+        string Get_RoutingTable() ;
 };
 
 #endif

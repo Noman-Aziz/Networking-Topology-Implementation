@@ -49,6 +49,18 @@ int main()
                     cout << "Received Broadcast Message From Server : " << response << "\n" ;
                 }
 
+                //Broadcast Delete From RoutingTable Message
+                else if (response[0] == '5')
+                {
+                    //Send Message to Other Servers
+                    Send_Broadcast_Message(S, response, i) ;
+                
+                    //Delete from Own Routing Table
+                    R.Delete_From_Routing_Table(response.erase(0,1));
+                
+                    cout << "Received Broadcast Message From Server : " << response << "\n" ;
+                }
+
                 //S->Send(message, Temp_sd);
 
                 continue;
