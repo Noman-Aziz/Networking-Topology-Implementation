@@ -1,0 +1,3 @@
+g++ server.cpp ../Header_Files/Server.cpp ../Header_Files/Client.cpp ../Header_Files/RoutingTable.cpp -pthread -o servers
+g++ proxy_server.cpp ../Header_Files/Server.cpp ../Header_Files/RoutingTable.cpp -o proxy_server
+g++ client.cpp ../Header_Files/Client.cpp -pthread -o clients
