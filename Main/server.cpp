@@ -19,6 +19,8 @@ void Connect_To_Proxy_Server();
 void Add_To_Routing_Table();
 void * Rec_From_Proxy_Server(void * args);
 void Wait_For_Connection();
+void Check_Response_Type(string, int);
+void Delete_From_Routing_Table();
 
 int main()
 {
@@ -119,6 +121,20 @@ void Add_To_Routing_Table()
     C->Send(rtr_message) ;
 }
 
+void Delete_From_Routing_Table()
+{
+    string cport = to_string(S->Get_Client_Port()) ;
+
+    //delete from self routingtable
+    R.Delete_From_Routing_Table(cport) ;
+
+    //generate a message to send to proxy server
+    string code = "5" ;
+    string rtr_message = code + to_string(S->Get_Client_Port()) ;
+
+    C->Send(rtr_message) ;
+}
+
 //Thread To Receive Messages from Proxy Server
 void * Rec_From_Proxy_Server(void * args)
 {
@@ -139,8 +155,28 @@ void * Rec_From_Proxy_Server(void * args)
             cout << "Received Broadcase Message from ProxyServer\nAdded an Entry to Routing Table : " << message << endl;
         }    
 
+        //Broadcast Receive From Routing Table
+        else if (message[0] == '5')
+        {
+            R.Delete_From_Routing_Table(message.erase(0,1));
+            cout << "Received Broadcase Message from ProxyServer\nDeleted an Entry to Routing Table : " << message << endl;
+        }
+
         //Release Lock
         Mutex = false;
+    }
+}
+
+void Check_Response_Type(string response, int Temp_sd)
+{
+    //request for routing table
+    if (response[0] == '1')
+    {
+        cout << "Client IP(" << S->Get_Client_IP() << ") Port(" << S->Get_Client_Port() << ") Has Requested for RoutingTable\n";
+
+        string message = R.Get_RoutingTable() ;
+
+        S->Send(message, Temp_sd) ;    
     }
 }
 
@@ -156,9 +192,7 @@ void Wait_For_Connection()
     {
         //Lock is Not Aqquired
         while(Mutex)
-        {
-            cout << "IM SLEEPING\n";
-        }
+        {}
 
         ret_val = S->Select(2);
 
@@ -182,14 +216,21 @@ void Wait_For_Connection()
                 response = S->Receive(Temp_sd, i) ;
 
                 if(response == "exit")
+                {
+                    cout << "Client IP(" << S->Get_Client_IP() << ") Port(" << S->Get_Client_Port() << ") Has Closed the Connection with Server\n" ;
+                    Delete_From_Routing_Table();
                     continue;
+                }
 
-                cout << "Client IP(" << S->Get_Client_IP() << ") Port(" << S->Get_Client_Port() << ") : " << response << "\n" ;
+                //CHECK RESPONSE TYPE
+                Check_Response_Type(response, Temp_sd);
 
-                cout << "Server : " ;
-                getline(cin,message) ;
+                //cout << "Client IP(" << S->Get_Client_IP() << ") Port(" << S->Get_Client_Port() << ") : " << response << "\n" ;
 
-                S->Send(message, Temp_sd);
+                //cout << "Server : " ;
+                //getline(cin,message) ;
+
+                //S->Send(message, Temp_sd);
             }
         }
     }

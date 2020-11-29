@@ -6,14 +6,13 @@ using namespace std;
 
 //GLOBAL VARIABLES
 Client *C ;
+bool Mutex = false;
+bool Closed = false;
 
 //FUNCTION PROTOTYPES
 Client *Setup_Client_Connection();
 void * Receive_Messages(void *);
 void Send_Messages();
-
-bool RecieveMutex = true;
-
 
 int main()
 {
@@ -43,66 +42,95 @@ void * Receive_Messages(void * args)
 
         string rec = C->Receive();
         cout << rec << endl;
+
+        Mutex = true ;
     }
 }
 
 void Send_Messages()
 {
-
-
     while(1)
     {
+        //for first server message
+        sleep(1) ;
+
         cout<<"SELECT MESSAGE CODE:"<<endl;
         cout<<"1 :  Request routing table"<<endl;
         cout<<"2 :  Communicate With Client By Port Number"<<endl;
         cout<<"3 :  Request from DNS SERVER"<<endl;
+        cout<<"4 :  Exit Client\n" ;
+        cout<<"YOUR CHOICE : " ;
 
-    
         int choice;
         cin>>choice;
-        
+
         string base_code = to_string(choice);
             
 
         //INCASE OF CLIENT TO CLIENT COMMUNICATION
         if(choice == 2 ){
+
             string PORT;
             cout<<"ENTER PORT NUMBER OF CLIENT TO CONNECT TOO";
             cin>>PORT;  
             
+            Closed = false;
 
             base_code = " " + PORT;
 
-            while(RecieveMutex){
+            while(!Closed){
                 
                 string msg;
                 getline(cin, msg);
 
-                if (msg == "exit"){
-                    //do karwai 
-                    
-                    return ;
-                }
-
                 msg = base_code + msg;
 
                 C->Send(msg);
-                
-                
 
-      
+                if (msg == "closed"){
+                    break;
+                }
+
+                Mutex = false ;
+                while(!Mutex){}
             }
         }
 
-
-        string msg;
-        getline(cin, msg);
-        msg = base_code + msg;
-        C->Send(msg);
-        if (msg == "exit")
+        else if(choice == 1)
         {
-            return ;
+            C->Send(base_code) ;
+
+            Mutex = false;
+            while(!Mutex){}
         }
+
+        //do later for number 3
+        else if (choice == 3)
+        {
+            string msg;
+            getline(cin, msg);
+            msg = base_code + msg;
+            C->Send(msg);
+            if (msg == "exit")
+            {
+                return ;
+            }
+        }
+        
+        else if (choice == 4)
+        {
+            string msg = "exit";
+            C->Send(msg);
+            return;
+        }
+
+        //wrong choice
+        else
+        {
+            cout << "\nWrong Choice Try Again\n";
+            continue;
+        }
+        
     }
 }
 

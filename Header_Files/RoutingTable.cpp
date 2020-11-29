@@ -43,3 +43,15 @@ void RoutingTable::Delete_From_Routing_Table(string port)
         }
     }
 }
+
+string RoutingTable::Get_RoutingTable()
+{
+    string rt = "\nClient Port\tServer Ip\tServer Port\n";
+
+    for(int i=0 ; i<_Client_Port.size() ; i++)
+    {
+        rt += _Client_Port[i] + "\t" + _Server_IP[i] + "\t" + _Server_Port[i] + "\n" ;
+    }
+
+    return rt ;
+}

@@ -124,7 +124,7 @@ void Server::Send(string message, struct sockaddr_in &udp_cli_sock)
 
 string Server::Receive(int client, int index)
 {
-    char buff[1000] = {};
+    char buff[10000] = {};
 
     if(_Tcp_Flag == true){
 

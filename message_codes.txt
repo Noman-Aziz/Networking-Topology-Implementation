@@ -2,3 +2,5 @@
 1 - display routing table (sent to server from client)
 2 - communicate with other client (sent from client to server)
 3 - request from DNS SERVER (client to server to proxyserver to DNS SERVER)
+4 - exit from client
+5 - Delete from routing table
