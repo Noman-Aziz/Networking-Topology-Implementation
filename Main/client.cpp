@@ -62,8 +62,8 @@ void Send_Messages()
         cin>>choice;
         
         string base_code = to_string(choice);
+        
             
-
         //INCASE OF CLIENT TO CLIENT COMMUNICATION
         if(choice == 2 ){
             string PORT;
