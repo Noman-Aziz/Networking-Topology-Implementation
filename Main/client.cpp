@@ -12,12 +12,16 @@ Client *Setup_Client_Connection();
 void * Receive_Messages(void *);
 void Send_Messages();
 
+bool RecieveMutex = true;
+
+
 int main()
 {
     C = Setup_Client_Connection();
 
     pthread_t thread1 ;
     pthread_create(&thread1, NULL, Receive_Messages, NULL);
+    
 
     Send_Messages() ;
 
@@ -44,10 +48,56 @@ void * Receive_Messages(void * args)
 
 void Send_Messages()
 {
+
+
     while(1)
     {
+        cout<<"SELECT MESSAGE CODE:"<<endl;
+        cout<<"1 :  Request routing table"<<endl;
+        cout<<"2 :  Communicate With Client By Port Number"<<endl;
+        cout<<"3 :  Request from DNS SERVER"<<endl;
+
+    
+        int choice;
+        cin>>choice;
+        
+        string base_code = to_string(choice);
+            
+
+        //INCASE OF CLIENT TO CLIENT COMMUNICATION
+        if(choice == 2 ){
+            string PORT;
+            cout<<"ENTER PORT NUMBER OF CLIENT TO CONNECT TOO";
+            cin>>PORT;  
+            
+
+            base_code = " " + PORT;
+
+            while(RecieveMutex){
+                
+                string msg;
+                getline(cin, msg);
+
+                if (msg == "exit"){
+                    //do karwai 
+                    
+                    return ;
+                }
+
+                msg = base_code + msg;
+
+                C->Send(msg);
+                
+                
+
+      
+            }
+        }
+
+
         string msg;
         getline(cin, msg);
+        msg = base_code + msg;
         C->Send(msg);
         if (msg == "exit")
         {

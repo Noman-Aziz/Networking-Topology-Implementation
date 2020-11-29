@@ -1,3 +1,4 @@
 0 - add to routing table (sent from servers to proxyserver and to other servers)
 1 - display routing table (sent to server from client)
 2 - communicate with other client (sent from client to server)
+3 - request from DNS SERVER (client to server to proxyserver to DNS SERVER)

@@ -19,7 +19,7 @@ int main()
     while(1)
     {
         S->Select(0);
-
+        
         //checking if existing client sent message
         for(int i=0 ; i< max_clients ; i++)
         {
