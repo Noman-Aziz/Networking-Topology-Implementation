@@ -47,7 +47,7 @@ void * Receive_Messages(void * args)
         else if (!Closed)
         {
             //Removing Message Code from Message
-            rec.erase(0,1) ;
+            rec.erase(0,1);
             //Extracting Source Port from Message
             stringstream ss(rec);
             string temp;
