@@ -32,6 +32,7 @@ class Server
         string _Server_Ip;
 
         int * _Client_Fds, _Max_Clients, _Master_Socket, _New_Socket, _Max_Sd ;
+        int * _Client_Ports ;
 
         //current client file descriptor
         int _Current_Client_Fd;
@@ -131,6 +132,8 @@ class Server
         //This is Used to Get Connected Client IP
         string Get_Client_IP();
 
+        //Used to Get Client File Descriptor From Their Port
+        int Get_Fd_By_Port(int);
 };
 
 #endif

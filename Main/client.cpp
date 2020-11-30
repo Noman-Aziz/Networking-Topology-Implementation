@@ -13,6 +13,7 @@ bool Closed = false;
 Client *Setup_Client_Connection();
 void * Receive_Messages(void *);
 void Send_Messages();
+bool Does_Exist(string, string);
 
 int main()
 {
@@ -33,6 +34,9 @@ void * Receive_Messages(void * args)
 
     for (;;)
     {
+
+        string rec = C->Receive();
+
         //server connection message
         if (first)
         {
@@ -40,7 +44,28 @@ void * Receive_Messages(void * args)
             cout << "Server Connection Response : " ;
         }
 
-        string rec = C->Receive();
+        else if (!Closed)
+        {
+            //Removing Message Code from Message
+            rec.erase(0,1) ;
+            //Extracting Source Port from Message
+            stringstream ss(rec);
+            string temp;
+            ss >> temp ;
+            cout << "Client (" << temp << ") Response : " ;
+            //Removing Destination Port
+            ss >> temp ;
+            //Extracting Message
+            ss >> temp ;
+            rec = temp ;
+        }
+
+        //connection close message
+        if (!Closed && Does_Exist(rec,"closed"))
+        {
+            Closed = true;
+        }
+
         cout << rec << endl;
 
         Mutex = true ;
@@ -71,23 +96,25 @@ void Send_Messages()
         if(choice == 2 ){
 
             string PORT;
-            cout<<"ENTER PORT NUMBER OF CLIENT TO CONNECT TOO";
+            cout<<"ENTER PORT NUMBER OF CLIENT TO CONNECT TO : ";
             cin>>PORT;  
             
             Closed = false;
 
-            base_code = " " + PORT;
+            base_code = "2" + PORT;
 
             while(!Closed){
                 
                 string msg;
+                cout << "Enter Message to Send To Client : " ;
                 getline(cin, msg);
 
                 msg = base_code + msg;
 
                 C->Send(msg);
 
-                if (msg == "closed"){
+                if (Does_Exist(msg,"closed")){
+                    Closed = true ;
                     break;
                 }
 
@@ -131,6 +158,19 @@ void Send_Messages()
             continue;
         }
         
+    }
+}
+
+bool Does_Exist(string str1, string str2)
+{
+    size_t no_serial = str1.find(str2);
+
+    if (no_serial != string::npos){
+        return true;
+    }
+
+    else{
+        return false;
     }
 }
 

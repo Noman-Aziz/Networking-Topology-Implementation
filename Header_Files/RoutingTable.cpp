@@ -55,3 +55,25 @@ string RoutingTable::Get_RoutingTable()
 
     return rt ;
 }
+
+bool RoutingTable::Does_Client_Exist(string cport)
+{
+    for(int i=0 ; i<_Client_Port.size() ; i++)
+    {
+        if(_Client_Port[i] == cport)
+            return true;        
+    }
+
+    return false;
+}
+
+bool RoutingTable::Is_Directly_Connected(string cport)
+{
+    for(int i=0 ; i<_Client_Port.size() ; i++)
+    {
+        if(cport == _Client_Port[i] && _Directly_Connected[i])
+            return true;
+    }
+
+    return false;
+}

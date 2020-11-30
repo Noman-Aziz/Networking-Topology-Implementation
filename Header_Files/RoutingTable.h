@@ -27,6 +27,12 @@ class RoutingTable
 
         //Returns Routing Table
         string Get_RoutingTable() ;
+
+        //Does client Exist
+        bool Does_Client_Exist(string);
+
+        //Is Client Directly Connected
+        bool Is_Directly_Connected(string) ;
 };
 
 #endif

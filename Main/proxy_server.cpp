@@ -6,6 +6,7 @@ using namespace std;
 //Function Prototypes
 Server *Setup_Server_Connection();
 void Send_Broadcast_Message(Server *, string, int);
+void Send_Client_Message(Server *, string, int);
 
 int main()
 {
@@ -63,6 +64,13 @@ int main()
                     cout << "Received Broadcast Message From Server : " << response << "\n" ;
                 }
 
+                //Forward A Client Message To Any Client Via Server
+                else if (response[0] == '5')
+                {
+                    Send_Client_Message(S, response, i) ;
+
+                    cout << "Received a Client Message To Forward : " << response << "\n" ;
+                }
                 //S->Send(message, Temp_sd);
 
                 continue;
@@ -107,6 +115,34 @@ void Send_Broadcast_Message(Server * S, string message, int Sender_Index)
         if (Temp_sd != 0)
         {                 
             S->Send(message, Temp_sd);
+        }
+    }
+}
+
+void Send_Client_Message(Server * S, string message, int Sender_Index)
+{
+    int max_clients = S->Get_Max_Clients() ;
+    int Temp_sd;
+
+    //extracting receiver port from message
+    string temp = message;
+    string dport ;
+    temp.erase(0,1);
+    stringstream ss(temp) ;
+    ss << dport ;
+    ss << dport ;
+
+    for(int i=0 ; i<max_clients ; i++)
+    {
+        if (i == Sender_Index)
+            continue;
+
+        Temp_sd = S->Get_Client_FD(i) ;
+
+        if (Temp_sd == S->Get_Fd_By_Port(atoi(dport.c_str())))
+        {                 
+            S->Send(message, Temp_sd);
+            return ;
         }
     }
 }

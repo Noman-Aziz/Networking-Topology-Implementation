@@ -12,6 +12,8 @@ Server::Server(int max_clients)
     _Max_Clients = max_clients;
 
     _Client_Fds = new int[max_clients]; 
+
+    _Client_Ports = new int[max_clients];
 }
 
 Server::~Server()
@@ -19,9 +21,15 @@ Server::~Server()
     close(_Master_Socket);
 
     if (_Max_Clients == 1)
+    {
         delete _Client_Fds ;
+        delete _Client_Ports ;
+    }
     else
-        delete [] _Client_Fds ;        
+    {
+        delete [] _Client_Fds ;
+        delete [] _Client_Ports ;
+    }
 }
 
 void Server::Set_Tcp()
@@ -35,6 +43,7 @@ void Server::_Initialize_Client_FDs()
     for(int i=0 ; i < _Max_Clients ; i++ )
     {
         _Client_Fds[i] = 0 ;
+        _Client_Ports[i] = 0;
     }
 }
 
@@ -242,6 +251,7 @@ int Server::Select(int timeoutval)
             if( _Client_Fds[i] == 0 )
             {
                 _Client_Fds[i] = _Current_Client_Fd ;
+                _Client_Ports[i] = Get_Client_Port();
                 break;
             }
         }
@@ -288,4 +298,18 @@ string Server::Get_Server_IP()
 string Server::Get_Server_Port()
 {
     return to_string(_Port_No);
+}
+
+int Server::Get_Fd_By_Port(int port)
+{
+    assert(port > 0 && port < 65353);
+
+    for(int i=0 ; i<_Max_Clients ; i++)
+    {
+        if (port == _Client_Ports[i])
+            return _Client_Fds[i] ;
+    }
+
+    //Not Found
+    return -1 ;
 }
