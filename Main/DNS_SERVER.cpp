@@ -25,7 +25,6 @@ int main(){
         string query = DNS_CLIENT->Receive();
         string res = DT.get_by_name(query);
         DNS_CLIENT->Send(res);
-
     }
         
 
