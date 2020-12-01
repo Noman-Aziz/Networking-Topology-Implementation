@@ -129,12 +129,17 @@ void Send_Client_Message(Server * S, string message, int Sender_Index)
     cout << message << endl;
     string dport ;
     temp.erase(0,1);
+
     cout << temp << endl;
+    
     stringstream ss(temp) ;
-    ss << dport ;
+    ss >> dport ;
     cout << dport << endl;
-    ss << dport ;
+    
+    ss >> dport ;
     cout << dport << endl;
+    
+    
     for(int i=0 ; i<max_clients ; i++)
     {
         if (i == Sender_Index)
@@ -149,3 +154,5 @@ void Send_Client_Message(Server * S, string message, int Sender_Index)
         }
     }
 }
+
+
