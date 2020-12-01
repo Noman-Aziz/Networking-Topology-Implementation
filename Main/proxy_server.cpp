@@ -6,7 +6,9 @@ using namespace std;
 //Function Prototypes
 Server *Setup_Server_Connection();
 void Send_Broadcast_Message(Server *, string, int);
-void Send_Client_Message(Server *, string, int, RoutingTable *);
+void Send_Client_Message(Server *, string, int, RoutingTable *, int &, bool);
+void Send_Con_Occupied_Msg(Server *, string, int) ;
+bool Does_Exist(string, string);
 
 int main()
 {
@@ -18,8 +20,11 @@ int main()
     string response, message;
     int max_clients = S->Get_Max_Clients() ;
 
+    bool Connection_Occupied = false ;
+    int Connection_Occupied_By = 0 ;
+    int Connection_Occupied_By_Server = 0 ;
+    int Connection_Occupied_By_Server_2 = 0 ;
 
-    
     while(1)
     {
         S->Select(0);
@@ -69,9 +74,43 @@ int main()
                 //Forward A Client Message To Any Client Via Server
                 else if (response[0] == '2')
                 {
-                    Send_Client_Message(S, response, i, &R) ;
-
                     cout << "Received a Client Message From Server " << client_port << " To Forward to Server \n" ;//<< response << "\n" ;
+
+                    if( Connection_Occupied && client_port != Connection_Occupied_By_Server && client_port != Connection_Occupied_By_Server_2 )
+                    {
+                        Send_Con_Occupied_Msg(S, response, Connection_Occupied_By) ;
+                        cout << "Link was Occupied by Client " << Connection_Occupied_By << ", Therefore, Denied That Request\n" ;
+                    }
+
+                    else
+                    {
+                        if(!Connection_Occupied)
+                        {
+                            Connection_Occupied = true ;
+                            Connection_Occupied_By_Server = client_port ;
+
+                            string temp = response ;
+                            temp.erase(0,1) ;
+                            stringstream ss(temp);
+                            string sport ;
+                            ss >> sport ;
+                            Connection_Occupied_By = atoi(sport.c_str()) ;
+
+                            Send_Client_Message(S, response, i, &R, Connection_Occupied_By_Server_2, true) ;
+
+                            continue ;
+                        }
+                        
+                        else if(Does_Exist(response, "closed") || Does_Exist(response, "Link is Occupied"))
+                        {
+                            Connection_Occupied = false;
+                            Connection_Occupied_By = 0 ;
+                            Connection_Occupied_By_Server = 0 ;
+                            Connection_Occupied_By_Server_2 = 0 ;
+                        }
+
+                        Send_Client_Message(S, response, i, &R, Connection_Occupied_By_Server_2, false) ;
+                    }
                 }
                 //S->Send(message, Temp_sd);
 
@@ -121,7 +160,23 @@ void Send_Broadcast_Message(Server * S, string message, int Sender_Index)
     }
 }
 
-void Send_Client_Message(Server * S, string message, int Sender_Index, RoutingTable * R)
+void Send_Con_Occupied_Msg(Server * S, string response, int OccupiedBy)
+{
+    //extracting sender port from message
+    string temp = response;
+    string sport, dport ;
+    temp.erase(0,1);
+
+    stringstream ss(temp) ;
+    ss >> sport ;
+    ss >> dport ;
+
+    string msg = "2ProxyServer " + sport + " Cannot Establish Connection with Client " + dport + ", Link is Occupied by Client " + to_string(OccupiedBy) + "\n" ;
+
+    S->Send(msg) ;
+}
+
+void Send_Client_Message(Server * S, string message, int Sender_Index, RoutingTable * R, int & Server2, bool Update)
 {
     int max_clients = S->Get_Max_Clients() ;
     int Temp_sd;
@@ -139,6 +194,10 @@ void Send_Client_Message(Server * S, string message, int Sender_Index, RoutingTa
     int Sdport = R->Get_ProxyServer_Client_Port(dport) ;
     assert(Sdport != -1) ;
     
+    //getting server2 info
+    if(Update)
+        Server2 = Sdport ;
+
     for(int i=0 ; i<max_clients ; i++)
     {
         if (i == Sender_Index)
@@ -154,4 +213,15 @@ void Send_Client_Message(Server * S, string message, int Sender_Index, RoutingTa
     }
 }
 
+bool Does_Exist(string str1, string str2)
+{
+    size_t no_serial = str1.find(str2);
 
+    if (no_serial != string::npos){
+        return true;
+    }
+
+    else{
+        return false;
+    }
+}

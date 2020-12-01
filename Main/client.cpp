@@ -53,8 +53,30 @@ void * Receive_Messages(void * args)
                 cout << "\n" ;
             }
 
-            //Path Occupied
-            else if(Does_Exist(rec,"Connection is Occupied"))
+            //PATHH Occupied (RECEIVED FROM PROXYSERVER)
+            else if(Does_Exist(rec," Sorry, Link is Occupied"))
+            {
+                stringstream ss(rec.erase(0,1)) ;
+                string temp ;
+
+                cout << "Received Message From Server : " ; 
+                
+                //removing source and destination port from message
+                ss >> temp ;
+                ss >> temp ;
+
+                while(ss >> temp)
+                    cout << temp << " " ;
+                cout << "\n" ;
+
+                Closed = true;
+                Mutex = true;
+                Dport = "";
+                continue;                
+            }
+
+            //Path Occupied (RECEIVED FROM SERVER)
+            else if(Does_Exist(rec,"Link is Occupied"))
             {
                 cout << "Received Message From Server : " << rec.erase(0,1) << "\n" ;
                 Closed = true;
@@ -64,7 +86,7 @@ void * Receive_Messages(void * args)
             }
 
             //Wrong Destination port Number
-            else if (!Closed && Does_Exist(rec,"No Client Exists"))
+            else if (!Closed && (Does_Exist(rec,"No Client Exists") || Does_Exist(rec,"Messages to Yourself")))
             {
                 Closed = true;
                 cout << "Received Message From Server : " << rec.erase(0,1) << "\n";

@@ -9,7 +9,9 @@ using namespace std;
 //GLOBAL VARIABLES
 bool Mutex = false;
 bool Connection_Occupied = false ;
-int Connection_Occupied_By ;
+int Connection_Occupied_By = 0;
+bool Internally_Connected = false ;
+
 Client *C;
 RoutingTable R;
 Server *S;
@@ -185,7 +187,6 @@ void *Rec_From_Proxy_Server(void *args)
         //Received Message From ProxyServer about a Client Communication
         else if (message[0] == '2')
         {
-
             //CONNECTION CLOSED MESSAGE | FREE CONECTION LINE
             if(Does_Exist(message, "closed"))
             {
@@ -203,8 +204,30 @@ void *Rec_From_Proxy_Server(void *args)
             ss >> cport;
             //Extracting Destination Port From Message
             ss >> dport;
+
+            //Connection is Occupied (e.g C1 and C2 of S1 are Talking To Each Other)
+            if(Internally_Connected)
+            {
+                string msg = "2" + dport + " " + cport + " Sorry, Link is Occupied by Client " + to_string(Connection_Occupied_By) + ", Cannot Send Message To Another Client\n" ;
+                C->Send(msg) ;
+                cout << "Received Connection Requesest from " << cport << ", But Denied It Since Connection is Already Occupied by Client " << Connection_Occupied_By << "\n" ;
         
-            cout << "Received Message from Client " << cport << " Through ProxyServer For Client " << dport << endl;
+                //Release Lock
+                Mutex = false;
+        
+                continue;
+            }
+
+            //Link is Occupied
+            if(Does_Exist(message, "Link is Occupied"))
+            {
+                Connection_Occupied_By = 0 ;
+                Connection_Occupied = false ;
+                cout << "Received Message from ProxyServer For Client " << dport << endl;
+            }
+
+            else
+                cout << "Received Message from Client " << cport << " Through ProxyServer For Client " << dport << endl;
         
             //Forward Message To Appropiate Connected Client Port
             int d_fd = S->Get_Fd_By_Port(atoi(dport.c_str())) ;
@@ -247,10 +270,13 @@ void Check_Response_Type(string response, int Temp_sd, int index)
             Connection_Occupied_By = S->Get_Client_Port(index) ;
         }
 
+        else if(Connection_Occupied_By && Internally_Connected)
+            Connection_Occupied_By = S->Get_Client_Port(index) ;
+
         //If Path is Occupied, Cannot Send Message
-        if(Connection_Occupied && Connection_Occupied_By != S->Get_Client_Port(index))
+        if(Connection_Occupied && Connection_Occupied_By != S->Get_Client_Port(index) && !Internally_Connected)
         {
-            string msg = "2Sorry, Connection is Occupied, Cannot Send Message To Another Client\n" ;
+            string msg = "2Sorry, Link is Occupied by Client " + to_string(Connection_Occupied_By) + ", Cannot Send Message To Another Client\n" ;
             S->Send(msg);
             return ;
         }
@@ -260,16 +286,18 @@ void Check_Response_Type(string response, int Temp_sd, int index)
         {
             Connection_Occupied_By = 0;
             Connection_Occupied = false;
+            Internally_Connected = false ;
         }
 
         //Extracting Destination Port From Message
         string temp = response;
         temp.erase(0,1) ;
-        response = "2" + to_string(Connection_Occupied_By) + " " + temp ;
 
         stringstream ss(temp);
         string dport ;
         ss >> dport ;
+
+        response = "2" + to_string(Connection_Occupied_By) + " " + temp ;
 
         cout << "Client IP(127.0.0.1) Port(" << Connection_Occupied_By << ") Has Sent Message To Client " << dport<< "\n";
 
@@ -278,7 +306,42 @@ void Check_Response_Type(string response, int Temp_sd, int index)
             temp = "2No Client Exists With That Port Number\n";
             S->Send(temp, Temp_sd);
             cout << "Connection Establishment Failed Due To Invalid Destination Port Number\n";
+           
+            Connection_Occupied = false;
+            Connection_Occupied_By = 0 ;
+            
         }
+
+        //Cannot Send Message to Itself
+        else if (Connection_Occupied_By == atoi(dport.c_str()) && !Internally_Connected)
+        {
+            cout << "Connection Establishment Failed Due To Sender Sending Messages to Itself\n";
+        
+            Connection_Occupied = false;
+            Connection_Occupied_By = 0 ;
+            
+
+            temp = "2You Cannot Send Messages to Yourself\n" ;
+            S->Send(temp, Temp_sd) ;
+        }
+
+        //Sending Message to Other Directly Connected Client
+        else if (R.Is_Directly_Connected(dport))
+        {
+            Internally_Connected = true ;
+
+            for(int i=0 ; i<S->Get_Max_Clients() ; i++)
+            {
+                Temp_sd = S->Get_Client_FD(i) ;
+
+                if (Temp_sd == S->Get_Fd_By_Port(atoi(dport.c_str())))
+                {                 
+                    S->Send(response, Temp_sd);
+                    return ;
+                }
+            }
+        }
+
         //Forward Message to ProxyServer
         else
         {
