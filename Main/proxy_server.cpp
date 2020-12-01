@@ -6,11 +6,12 @@ using namespace std;
 //Function Prototypes
 Server *Setup_Server_Connection();
 void Send_Broadcast_Message(Server *, string, int);
-void Send_Client_Message(Server *, string, int);
+void Send_Client_Message(Server *, string, int, RoutingTable *);
 
 int main()
 {
     Server * S = Setup_Server_Connection();
+
     RoutingTable R ;
 
     int Temp_sd;
@@ -31,6 +32,7 @@ int main()
             if (S->Check_FD_Set(Temp_sd))
             {                 
                 response = S->Receive(Temp_sd, i) ;
+                int client_port = S->Get_Client_Port(i) ;
 
                 //only one message and response with one client
                 //if(response == "exit")
@@ -47,9 +49,9 @@ int main()
                     Send_Broadcast_Message(S, response, i) ;
                 
                     //Add to Own Routing Table
-                    R.Add_To_Routing_Table(response.erase(0,1), false);
-                
-                    cout << "Received Broadcast Message From Server : " << response << "\n" ;
+                    R.Add_To_Routing_Table(response.erase(0,1), false, client_port);
+
+                    cout << "Received Broadcast Message From Server " << client_port << " To Add To RoutingTable : (Client_Port Server_IP Server_Port) " << response << "\n" ;
                 }
 
                 //Broadcast Delete From RoutingTable Message
@@ -61,15 +63,15 @@ int main()
                     //Delete from Own Routing Table
                     R.Delete_From_Routing_Table(response.erase(0,1));
                 
-                    cout << "Received Broadcast Message From Server : " << response << "\n" ;
+                    cout << "Received Broadcast Message From Server " << client_port << " To Delete From RoutingTable : " << response << "\n" ;
                 }
 
                 //Forward A Client Message To Any Client Via Server
                 else if (response[0] == '2')
                 {
-                    Send_Client_Message(S, response, i) ;
+                    Send_Client_Message(S, response, i, &R) ;
 
-                    cout << "Received a Client Message To Forward : " << response << "\n" ;
+                    cout << "Received a Client Message From Server " << client_port << " To Forward to Server \n" ;//<< response << "\n" ;
                 }
                 //S->Send(message, Temp_sd);
 
@@ -119,26 +121,23 @@ void Send_Broadcast_Message(Server * S, string message, int Sender_Index)
     }
 }
 
-void Send_Client_Message(Server * S, string message, int Sender_Index)
+void Send_Client_Message(Server * S, string message, int Sender_Index, RoutingTable * R)
 {
     int max_clients = S->Get_Max_Clients() ;
     int Temp_sd;
 
     //extracting receiver port from message
     string temp = message;
-    cout << message << endl;
     string dport ;
     temp.erase(0,1);
 
-    cout << temp << endl;
-    
     stringstream ss(temp) ;
     ss >> dport ;
-    cout << dport << endl;
-    
     ss >> dport ;
-    cout << dport << endl;
-    
+
+    //getting server's port wrt client's destination port
+    int Sdport = R->Get_ProxyServer_Client_Port(dport) ;
+    assert(Sdport != -1) ;
     
     for(int i=0 ; i<max_clients ; i++)
     {
@@ -147,7 +146,7 @@ void Send_Client_Message(Server * S, string message, int Sender_Index)
 
         Temp_sd = S->Get_Client_FD(i) ;
 
-        if (Temp_sd == S->Get_Fd_By_Port(atoi(dport.c_str())))
+        if (Temp_sd == S->Get_Fd_By_Port(Sdport))
         {                 
             S->Send(message, Temp_sd);
             return ;

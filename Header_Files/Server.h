@@ -25,7 +25,7 @@ class Server
     private:
 
         struct sockaddr_in _Server_Address;
-        struct sockaddr_in _Client_Socket;
+        struct sockaddr_in * _Client_Socket;
 
         bool _Tcp_Flag;
         bool _Udp_Flag;
@@ -34,6 +34,7 @@ class Server
 
         int * _Client_Fds, _Max_Clients, _Master_Socket, _New_Socket, _Max_Sd ;
         int * _Client_Ports ;
+        int _Currently_Connected_Index ;
 
         //current client file descriptor
         int _Current_Client_Fd;
@@ -118,8 +119,8 @@ class Server
         //This Function is Used to Receive Messages from Clients
         string Receive(int = -1, int = -1);
 
-        //This Returns Client Socket
-        struct sockaddr_in & Get_Client_Socket();        
+        //This Returns Required Client Socket
+        struct sockaddr_in & Get_Client_Socket(int);        
 
         //This Returns Mapped File Descriptor for Given Client (Default for Current Connected Client)
         int Get_Client_FD(int = -1);
@@ -128,10 +129,10 @@ class Server
         int Get_Max_Clients();
 
         //This is Used to Get Connected Client Port
-        int Get_Client_Port();
+        int Get_Client_Port(int = -1);
 
         //This is Used to Get Connected Client IP
-        string Get_Client_IP();
+        string Get_Client_IP(int = -1);
 
         //Used to Get Client File Descriptor From Their Port
         int Get_Fd_By_Port(int);

@@ -21,8 +21,8 @@ void Connect_To_Proxy_Server();
 void Add_To_Routing_Table();
 void *Rec_From_Proxy_Server(void *args);
 void Wait_For_Connection();
-void Check_Response_Type(string, int);
-void Delete_From_Routing_Table();
+void Check_Response_Type(string, int, int);
+void Delete_From_Routing_Table(int);
 bool Does_Exist(string, string);
 
 int main()
@@ -128,16 +128,16 @@ void Add_To_Routing_Table()
     C->Send(rtr_message);
 }
 
-void Delete_From_Routing_Table()
+void Delete_From_Routing_Table(int index)
 {
-    string cport = to_string(S->Get_Client_Port());
+    string cport = to_string(S->Get_Client_Port(index));
 
     //delete from self routingtable
     R.Delete_From_Routing_Table(cport);
 
     //generate a message to send to proxy server
     string code = "5";
-    string rtr_message = code + to_string(S->Get_Client_Port());
+    string rtr_message = code + to_string(S->Get_Client_Port(index));
 
     C->Send(rtr_message);
 }
@@ -209,7 +209,7 @@ void *Rec_From_Proxy_Server(void *args)
             //Forward Message To Appropiate Connected Client Port
             int d_fd = S->Get_Fd_By_Port(atoi(dport.c_str())) ;
             assert(d_fd != -1) ;
-            S->Send(message.erase(0,1), d_fd) ;
+            S->Send(message, d_fd) ;
         }
 
         //Release Lock
@@ -218,12 +218,12 @@ void *Rec_From_Proxy_Server(void *args)
 }
 
 //It Checks Response From Client
-void Check_Response_Type(string response, int Temp_sd)
+void Check_Response_Type(string response, int Temp_sd, int index)
 {
     //request for routing table
     if (response[0] == '1')
     {
-        cout << "Client IP(" << S->Get_Client_IP() << ") Port(" << S->Get_Client_Port() << ") Has Requested for RoutingTable\n";
+        cout << "Client IP(" << S->Get_Client_IP(index) << ") Port(" << S->Get_Client_Port(index) << ") Has Requested for RoutingTable\n";
 
         string message = R.Get_RoutingTable();
 
@@ -233,8 +233,8 @@ void Check_Response_Type(string response, int Temp_sd)
     //closing connection
     else if (response == "exit")
     {
-        cout << "Client IP(" << S->Get_Client_IP() << ") Port(" << S->Get_Client_Port() << ") Has Closed the Connection with Server\n";
-        Delete_From_Routing_Table();
+        cout << "Client IP(" << S->Get_Client_IP(index) << ") Port(" << S->Get_Client_Port(index) << ") Has Closed the Connection with Server\n";
+        Delete_From_Routing_Table(index);
     }
 
     //client to client chat
@@ -244,14 +244,15 @@ void Check_Response_Type(string response, int Temp_sd)
         if(!Connection_Occupied)
         {
             Connection_Occupied = true;
-            Connection_Occupied_By = S->Get_Client_Port() ;
+            Connection_Occupied_By = S->Get_Client_Port(index) ;
         }
 
         //If Path is Occupied, Cannot Send Message
-        if(Connection_Occupied && Connection_Occupied_By != S->Get_Client_Port())
+        if(Connection_Occupied && Connection_Occupied_By != S->Get_Client_Port(index))
         {
-            string msg = "Sorry, Connection is Occupied, Cannot Send Message To Another Client\n" ;
+            string msg = "2Sorry, Connection is Occupied, Cannot Send Message To Another Client\n" ;
             S->Send(msg);
+            return ;
         }
 
         //CONNECTION CLOSED MESSAGE | FREE CONECTION LINE
@@ -274,7 +275,7 @@ void Check_Response_Type(string response, int Temp_sd)
 
         if (!R.Does_Client_Exist(dport))
         {
-            temp = "No Client Exists With That Port Number\n";
+            temp = "2No Client Exists With That Port Number\n";
             S->Send(temp, Temp_sd);
             cout << "Connection Establishment Failed Due To Invalid Destination Port Number\n";
         }
@@ -306,6 +307,7 @@ void Wait_For_Connection()
         //new client has been connected so add it to routing table
         if (ret_val == 0)
             Add_To_Routing_Table();
+            
         //Timeout Occured on Select
         else if (ret_val == 2)
         {
@@ -323,7 +325,7 @@ void Wait_For_Connection()
                 response = S->Receive(Temp_sd, i);
 
                 //CHECK RESPONSE TYPE
-                Check_Response_Type(response, Temp_sd);
+                Check_Response_Type(response, Temp_sd, i);
 
                 //cout << "Client IP(" << S->Get_Client_IP() << ") Port(" << S->Get_Client_Port() << ") : " << response << "\n" ;
 

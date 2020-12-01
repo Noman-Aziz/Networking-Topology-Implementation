@@ -14,6 +14,8 @@ Server::Server(int max_clients)
     _Client_Fds = new int[max_clients]; 
 
     _Client_Ports = new int[max_clients];
+
+    _Client_Socket = new struct sockaddr_in[max_clients] ;
 }
 
 Server::~Server()
@@ -24,11 +26,13 @@ Server::~Server()
     {
         delete _Client_Fds ;
         delete _Client_Ports ;
+        delete _Client_Socket ;
     }
     else
     {
         delete [] _Client_Fds ;
         delete [] _Client_Ports ;
+        delete [] _Client_Socket ;
     }
 }
 
@@ -108,8 +112,8 @@ void Server::Listen(int no)
 
 int Server::Accept()
 {
-    int len = sizeof(_Client_Socket) ;
-    return accept(_Master_Socket, (struct sockaddr*)&_Client_Socket , (socklen_t *) &len);
+    int len = sizeof(_Client_Socket[_Currently_Connected_Index]) ;
+    return accept(_Master_Socket, (struct sockaddr*)&_Client_Socket[_Currently_Connected_Index] , (socklen_t *) &len);
 }
 
 void Server::Send(string message, int tcp_cli_sock)
@@ -160,19 +164,25 @@ string Server::Receive(int client, int index)
     return string(buff);
 }
 
-struct sockaddr_in & Server::Get_Client_Socket()        
+struct sockaddr_in & Server::Get_Client_Socket(int index)        
 {
-    return _Client_Socket;
+    return _Client_Socket[index];
 }
 
-int Server::Get_Client_Port()
+int Server::Get_Client_Port(int index)
 {
-    return (int) ntohs(_Client_Socket.sin_port);
+    if (index == -1)
+        return (int) ntohs(_Client_Socket[_Currently_Connected_Index].sin_port);
+    else
+        return (int) ntohs(_Client_Socket[index].sin_port);
 }
 
-string Server::Get_Client_IP()
+string Server::Get_Client_IP(int index)
 {
-    return inet_ntoa(_Client_Socket.sin_addr);
+    if (index == -1)
+        return inet_ntoa(_Client_Socket[_Currently_Connected_Index].sin_addr);
+    else
+        return inet_ntoa(_Client_Socket[index].sin_addr);
 }
 
 void Server::Clear_Socket_Set()
@@ -234,6 +244,16 @@ int Server::Select(int timeoutval)
     //checking if new connection on master socket
     if(FD_ISSET( _Master_Socket, &_Readfd ))
     {
+        //Assigning Value to _Currently_Connected_Index (EMPTY POS)
+        for(int i=0 ; i<_Max_Clients ; i++)
+        {
+            if( _Client_Fds[i] == 0 )
+            {
+                _Currently_Connected_Index = i ;
+                break ;
+            }
+        }
+            
         _Current_Client_Fd = Accept();
 
         assert(_Current_Client_Fd != -1);
@@ -250,6 +270,7 @@ int Server::Select(int timeoutval)
             //empty position
             if( _Client_Fds[i] == 0 )
             {
+                _Currently_Connected_Index = i ;
                 _Client_Fds[i] = _Current_Client_Fd ;
                 _Client_Ports[i] = Get_Client_Port();
                 break;
