@@ -65,7 +65,7 @@ int main()
                 }
 
                 //Forward A Client Message To Any Client Via Server
-                else if (response[0] == '5')
+                else if (response[0] == '2')
                 {
                     Send_Client_Message(S, response, i) ;
 
@@ -126,12 +126,15 @@ void Send_Client_Message(Server * S, string message, int Sender_Index)
 
     //extracting receiver port from message
     string temp = message;
+    cout << message << endl;
     string dport ;
     temp.erase(0,1);
+    cout << temp << endl;
     stringstream ss(temp) ;
     ss << dport ;
+    cout << dport << endl;
     ss << dport ;
-
+    cout << dport << endl;
     for(int i=0 ; i<max_clients ; i++)
     {
         if (i == Sender_Index)

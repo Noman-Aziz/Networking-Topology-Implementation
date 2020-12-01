@@ -8,6 +8,7 @@
 #include <assert.h>
 
 #include <string.h>
+#include <sstream> 
 
 #include <sys/types.h>
 #include <arpa/inet.h>

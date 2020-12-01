@@ -7,7 +7,7 @@ using namespace std;
 //GLOBAL VARIABLES
 Client *C ;
 bool Mutex = false;
-bool Closed = false;
+bool Closed = true;
 
 //FUNCTION PROTOTYPES
 Client *Setup_Client_Connection();
@@ -34,7 +34,6 @@ void * Receive_Messages(void * args)
 
     for (;;)
     {
-
         string rec = C->Receive();
 
         //server connection message
@@ -46,6 +45,15 @@ void * Receive_Messages(void * args)
 
         else if (!Closed)
         {
+            //Wrong Destination port Numeer,
+            if(Does_Exist(rec,"No Client Exists"))
+            {
+                Closed = true;
+                cout << rec << endl;
+                Mutex = true;
+                continue;
+            }
+        
             //Removing Message Code from Message
             rec.erase(0,1);
             //Extracting Source Port from Message
@@ -97,8 +105,9 @@ void Send_Messages()
 
             string PORT;
             cout<<"ENTER PORT NUMBER OF CLIENT TO CONNECT TO : ";
-            cin>>PORT;  
-            
+            cin>>PORT;
+            cin.ignore();
+
             Closed = false;
 
             base_code = "2" + PORT;
@@ -109,7 +118,7 @@ void Send_Messages()
                 cout << "Enter Message to Send To Client : " ;
                 getline(cin, msg);
 
-                msg = base_code + msg;
+                msg = base_code + " " + msg;
 
                 C->Send(msg);
 
