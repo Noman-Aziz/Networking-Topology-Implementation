@@ -284,8 +284,8 @@ void Check_Response_Type(string response, int Temp_sd, int index)
         //CONNECTION CLOSED MESSAGE | FREE CONECTION LINE
         if(Does_Exist(response, "closed"))
         {
-            Connection_Occupied_By = 0;
-            Connection_Occupied = false;
+            Connection_Occupied_By = 0 ;
+            Connection_Occupied = false ;
             Internally_Connected = false ;
         }
 
@@ -328,7 +328,8 @@ void Check_Response_Type(string response, int Temp_sd, int index)
         //Sending Message to Other Directly Connected Client
         else if (R.Is_Directly_Connected(dport))
         {
-            Internally_Connected = true ;
+            if(Connection_Occupied)
+                Internally_Connected = true ;
 
             for(int i=0 ; i<S->Get_Max_Clients() ; i++)
             {
