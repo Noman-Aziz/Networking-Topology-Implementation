@@ -2,7 +2,7 @@
 
 RoutingTable::RoutingTable(){}
 
-void RoutingTable::Add_To_Routing_Table(string data, bool directlycon)
+void RoutingTable::Add_To_Routing_Table(string data, bool directlycon, int CServerPort)
 {
     //split around spaces
     istringstream ss(data);
@@ -19,6 +19,8 @@ void RoutingTable::Add_To_Routing_Table(string data, bool directlycon)
     _Server_Port.push_back(temp);
 
     _Directly_Connected.push_back(directlycon);
+
+    _Clients_Server_Port.push_back(CServerPort) ;
 }
 
 void RoutingTable::Delete_From_Routing_Table(string port)
@@ -39,6 +41,9 @@ void RoutingTable::Delete_From_Routing_Table(string port)
             auto itr4 = _Directly_Connected.begin() + i ;
             _Directly_Connected.erase(itr4) ;
 
+            auto itr5 = _Clients_Server_Port.begin() + i ;
+            _Clients_Server_Port.erase(itr5) ;
+
             break;
         }
     }
@@ -46,12 +51,15 @@ void RoutingTable::Delete_From_Routing_Table(string port)
 
 string RoutingTable::Get_RoutingTable()
 {
-    string rt = "\nClient Port\tServer Ip\tServer Port\n";
+    string rt = "\n********************************************************\n";
+    rt += "Client Port\tServer Ip\tServer Port\tDirectly Connected\n";
 
     for(int i=0 ; i<_Client_Port.size() ; i++)
     {
-        rt += _Client_Port[i] + "\t" + _Server_IP[i] + "\t" + _Server_Port[i] + "\n" ;
+        rt += _Client_Port[i] + "\t" + _Server_IP[i] + "\t" + _Server_Port[i] + to_string(_Directly_Connected[i]) + "\n" ;
     }
+
+    rt += "********************************************************\n";
 
     return rt ;
 }
@@ -76,4 +84,15 @@ bool RoutingTable::Is_Directly_Connected(string cport)
     }
 
     return false;
+}
+
+int RoutingTable::Get_ProxyServer_Client_Port(string dport)
+{
+    for(int i=0 ; i<_Client_Port.size() ; i++)
+    {
+        if(dport == _Client_Port[i])
+            return _Clients_Server_Port[i] ;
+    }
+
+    return -1 ;
 }

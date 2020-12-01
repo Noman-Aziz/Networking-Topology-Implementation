@@ -8,12 +8,14 @@ using namespace std;
 Client *C ;
 bool Mutex = false;
 bool Closed = true;
+string Dport ;
 
 //FUNCTION PROTOTYPES
 Client *Setup_Client_Connection();
 void * Receive_Messages(void *);
 void Send_Messages();
 bool Does_Exist(string, string);
+void Input_Validation(int &);
 
 int main()
 {
@@ -22,7 +24,6 @@ int main()
     pthread_t thread1 ;
     pthread_create(&thread1, NULL, Receive_Messages, NULL);
     
-
     Send_Messages() ;
 
     return 0;
@@ -36,54 +37,93 @@ void * Receive_Messages(void * args)
     {
         string rec = C->Receive();
 
-        //server connection message
+        //server connection successfull message
         if (first)
         {
             first = false;
             cout << "Server Connection Response : " ;
         }
 
-        else if (!Closed)
+        //Received Message From Another Client
+        if(rec[0] == '2')
         {
-            //Wrong Destination port Numeer,
-            if(Does_Exist(rec,"No Client Exists"))
+            //(C2C First Time)
+            if (Closed)
             {
+                cout << "\n" ;
+            }
+
+            //Path Occupied
+            else if(Does_Exist(rec,"Connection is Occupied"))
+            {
+                cout << "Received Message From Server : " << rec.erase(0,1) << "\n" ;
                 Closed = true;
-                cout << rec << endl;
                 Mutex = true;
+                Dport = "";
                 continue;
             }
-        
-            //Removing Message Code from Message
-            rec.erase(0,1);
-            //Extracting Source Port from Message
-            stringstream ss(rec);
-            string temp;
-            ss >> temp ;
-            cout << "Client (" << temp << ") Response : " ;
-            //Removing Destination Port
-            ss >> temp ;
-            //Extracting Message
-            ss >> temp ;
-            rec = temp ;
+
+            //Wrong Destination port Number
+            else if (!Closed && Does_Exist(rec,"No Client Exists"))
+            {
+                Closed = true;
+                cout << "Received Message From Server : " << rec.erase(0,1) << "\n";
+                Mutex = true;
+                Dport = "";
+                continue;
+            }
+
+            //C2C Message (Conn Closed Message)
+            if (!Closed && Does_Exist(rec,"closed"))
+            {
+                Closed = true;
+                cout << "Received Message From Client " << Dport << " : Connection Closed\n" ;
+                Dport = "";
+                Mutex = true ;
+                continue;
+            }
+
+            string temp = rec ;
+            
+            //removing code from message
+            temp.erase(0,1) ;
+            stringstream ss(temp);
+            string response;
+
+            //seperating dport and response from message
+            ss >> Dport ;
+            ss >> response ;
+            
+            cout << "Received Message From Client " << Dport << " : " ;
+            while(ss >> response)
+                cout << response << " " ;
+            cout << "\n" ;
         }
 
-        //connection close message
-        if (!Closed && Does_Exist(rec,"closed"))
+        //Other Types of Messages
+        else
         {
-            Closed = true;
+            cout << rec << "\n" ;
         }
-
-        cout << rec << endl;
-
+        
         Mutex = true ;
     }
+}
+
+void Input_Validation(int & input)
+{
+    cin.clear ();
+    cin.ignore( 50 , '\n' );
+    cout << "Choice Must Be Integer, Try Again\n";
+    cin >> input;
 }
 
 void Send_Messages()
 {
     while(1)
     {
+        Dport = "" ;
+
         //for first server message
         sleep(1) ;
 
@@ -95,27 +135,35 @@ void Send_Messages()
         cout<<"YOUR CHOICE : " ;
 
         int choice;
-        cin>>choice;
+        cin>>choice;        
 
-        string base_code = to_string(choice);
-        
-            
+        while(!cin)
+            Input_Validation(choice) ;
+
+        string base_code = to_string(choice) ;
+
         //INCASE OF CLIENT TO CLIENT COMMUNICATION
         if(choice == 2 ){
 
-            string PORT;
-            cout<<"ENTER PORT NUMBER OF CLIENT TO CONNECT TO : ";
-            cin>>PORT;
+            //First Time Sending Message
+            if (Dport == "")
+            {
+                cout<<"Enter Port No of Client to Connect To : ";
+                cin>>Dport;
+            }
+
             cin.ignore();
+
+            string base_code = "2";
 
             Closed = false;
 
-            base_code = "2" + PORT;
+            base_code = "2" + Dport;
 
             while(!Closed){
                 
                 string msg;
-                cout << "Enter Message to Send To Client : " ;
+                cout << "Enter Message to Send To Client " << Dport << " : " ;
                 getline(cin, msg);
 
                 msg = base_code + " " + msg;
