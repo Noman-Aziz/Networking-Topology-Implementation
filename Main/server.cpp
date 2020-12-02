@@ -11,6 +11,8 @@ bool Mutex = false;
 bool Connection_Occupied = false ;
 int Connection_Occupied_By = 0;
 bool Internally_Connected = false ;
+string Server_Letter ;
+int DNS_Server_Port ;
 
 Client *C;
 RoutingTable R;
@@ -20,7 +22,7 @@ Server *S;
 Server *Setup_Server_Connection();
 Client *Setup_Client_Connection();
 void Connect_To_Proxy_Server();
-void Add_To_Routing_Table();
+void Add_To_Routing_Table(string);
 void *Rec_From_Proxy_Server(void *args);
 void Wait_For_Connection();
 void Check_Response_Type(string, int, int);
@@ -71,14 +73,17 @@ Server *Setup_Server_Connection()
         case 1:
             ip = "127.0.10.1";
             port = 5001;
+            Server_Letter = "1" ;
             break;
         case 2:
             ip = "127.0.10.2";
             port = 5002;
+            Server_Letter = "2" ;
             break;
         case 4:
             ip = "127.0.10.4";
             port = 5004;
+            Server_Letter ="4" ;
             break;
         default:
             cout << "\nWrong Option Try Again\n";
@@ -120,8 +125,8 @@ void Connect_To_Proxy_Server()
 void Add_To_Routing_Table()
 {
     //generate a message to send to proxy server
-    string code = "0";
-    string message = to_string(S->Get_Client_Port()) + " " + S->Get_Server_IP() + " " + S->Get_Server_Port();
+    string code = "0" ;
+    string message = Server_Letter + " " + to_string(S->Get_Client_Port()) + " " + S->Get_Server_IP() + " " + S->Get_Server_Port();
     string rtr_message = code + message;
 
     //Adding to Own RoutingTable
@@ -174,14 +179,54 @@ void *Rec_From_Proxy_Server(void *args)
         if (message[0] == '0')
         {
             R.Add_To_Routing_Table(message.erase(0, 1), false);
-            cout << "Received Broadcase Message from ProxyServer\nAdded an Entry to Routing Table : " << message << endl;
+            cout << "Received Broadcase Message from ProxyServer\nAdded an Entry to Routing Table : " << message << "\n";
         }
 
         //Broadcast Receive From Routing Table
         else if (message[0] == '5')
         {
             R.Delete_From_Routing_Table(message.erase(0, 1));
-            cout << "Received Broadcase Message from ProxyServer\nDeleted an Entry to Routing Table : " << message << endl;
+            cout << "Received Broadcase Message from ProxyServer\nDeleted an Entry to Routing Table : " << message << "\n";
+        }
+
+        //Received Message From ProxyServer about DNS Query
+        else if(message[0] == '3')
+        {
+            //Checking Whether This is Response from A Client to Send to ProxyServer
+
+            //To Do this i will check whether destination port is in directly connected client or not
+            string temp = message;
+            temp.erase(0,1) ;
+            string dport ;
+            stringstream ss(temp) ;
+            ss >> dport ;
+            int d_fd;
+            
+            //scenario 1 (it is for directly connected client)
+            if(R.Is_Directly_Connected(dport))
+            {
+                cout << "Received Message from ProxyServer of Dns Request to Forward to Client " << dport << "\n";
+                
+                //Forward Message To Appropiate Connected Client Port
+                d_fd = S->Get_Fd_By_Port(atoi(dport.c_str())) ;
+            }
+
+            //scenario 2 (i am s4, so forward to dns server)
+            else
+            {
+                cout << "Received Message of Client " << dport << " through ProxyServer to Send To Dns Server\n" ;
+
+                //Forward Message To Appropiate Connected Client Port
+                d_fd = S->Get_Fd_By_Port(DNS_Server_Port) ;
+            }
+
+            assert(d_fd != -1) ;
+            S->Send(message, d_fd) ;
+
+            //Release Lock
+            Mutex = false;
+    
+            continue;                
         }
 
         //Received Message From ProxyServer about a Client Communication
@@ -223,11 +268,11 @@ void *Rec_From_Proxy_Server(void *args)
             {
                 Connection_Occupied_By = 0 ;
                 Connection_Occupied = false ;
-                cout << "Received Message from ProxyServer For Client " << dport << endl;
+                cout << "Received Message from ProxyServer For Client " << dport << "\n";
             }
 
             else
-                cout << "Received Message from Client " << cport << " Through ProxyServer For Client " << dport << endl;
+                cout << "Received Message from Client " << cport << " Through ProxyServer For Client " << dport << "\n";
         
             //Forward Message To Appropiate Connected Client Port
             int d_fd = S->Get_Fd_By_Port(atoi(dport.c_str())) ;
@@ -349,6 +394,38 @@ void Check_Response_Type(string response, int Temp_sd, int index)
             C->Send(response);
         }
     }
+
+    //DNS Server Active Msg
+    else if(Does_Exist(response,"DNS SERVER"))
+    {
+        DNS_Server_Port = S->Get_Client_Port(index) ;
+        Delete_From_Routing_Table(index) ;
+    }
+
+    //Request From DNS Server
+    else if ( response[0] == '3' && response[1] != 'R' )
+    {
+        cout << "Client IP(" << S->Get_Client_IP(index) << ") Port(" << S->Get_Client_Port(index) << ") Has Requested Ip Address of a Website From DNS Server\n";
+
+        //Preparing The Message Format
+        response.erase(0,1) ;
+        response = "3" + to_string(S->Get_Client_Port(index)) + " " + response ;
+
+        C->Send(response) ;
+    }
+
+    //Scenario 3 DNS (Message Received From DNS Server)
+    else if(response[0] == '3' && response[1] == 'R')
+    {
+        cout << "A Query Response From DNS Server Received To Forward to ProxyServer" ;
+
+        C->Send(response) ;
+    }
+
+    //Scenario 4 (I am Server 4 : Received Message From Client to Send to DNS Server)
+    //{
+
+    //}
 }
 
 void Wait_For_Connection()
@@ -370,8 +447,10 @@ void Wait_For_Connection()
 
         //new client has been connected so add it to routing table
         if (ret_val == 0)
+        {
             Add_To_Routing_Table();
-            
+        }
+
         //Timeout Occured on Select
         else if (ret_val == 2)
         {
@@ -390,13 +469,6 @@ void Wait_For_Connection()
 
                 //CHECK RESPONSE TYPE
                 Check_Response_Type(response, Temp_sd, i);
-
-                //cout << "Client IP(" << S->Get_Client_IP() << ") Port(" << S->Get_Client_Port() << ") : " << response << "\n" ;
-
-                //cout << "Server : " ;
-                //getline(cin,message) ;
-
-                //S->Send(message, Temp_sd);
             }
         }
     }

@@ -61,7 +61,7 @@ struct DNS_TABLE{
             }
         }
 
-        return "NOT FOUND";
+        return "Record-Not-Exists";
     };
 
     void Display(){
@@ -69,9 +69,4 @@ struct DNS_TABLE{
             cout<<(it->name)<<" "<<(it->ip)<<endl;
         }
     }
-
 };
-
-
-
-

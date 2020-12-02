@@ -122,6 +122,20 @@ void * Receive_Messages(void * args)
             cout << "\n" ;
         }
 
+        //dns server msg
+        else if(rec[0] == '3')
+        {
+            rec.erase(0,2) ;
+
+            stringstream ss(rec) ;
+            string temp ;
+            ss >> temp ;
+
+            while(ss >> temp)
+                cout << temp ;
+            cout << endl ;
+        }
+
         //Other Types of Messages
         else
         {
@@ -210,17 +224,19 @@ void Send_Messages()
             while(!Mutex){}
         }
 
-        //do later for number 3
+        //Dns server request
         else if (choice == 3)
         {
             string msg;
-            getline(cin, msg);
+            cout << "Enter Name Website To Get Its Ip-Address (lowercase) : " ;
+            cin >> msg ;
+            cin.ignore() ;
             msg = base_code + msg;
             C->Send(msg);
-            if (msg == "exit")
-            {
-                return ;
-            }
+
+            //Waiting For Response
+            Mutex = false;
+            while(!Mutex){}
         }
         
         else if (choice == 4)
