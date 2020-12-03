@@ -1,5 +1,18 @@
 #include "RoutingTable.h"
 
+string setwidthto(string x , int s){
+    int size = s - x.length();
+
+    string str = x;
+    for(int i = 0 ; i < size ; i++)
+        str = str + " ";
+    
+
+    return str;
+}
+
+
+
 RoutingTable::RoutingTable(){}
 
 void RoutingTable::Add_To_Routing_Table(string data, bool directlycon, int CServerPort)
@@ -28,6 +41,7 @@ void RoutingTable::Add_To_Routing_Table(string data, bool directlycon, int CServ
         _Hops.push_back(0) ;
     else
         _Hops.push_back(2) ;    
+
 
     _Clients_Server_Port.push_back(CServerPort) ;
 
@@ -79,15 +93,17 @@ void RoutingTable::Delete_From_Routing_Table(string port)
 
 string RoutingTable::Get_RoutingTable()
 {
-    string rt = "\n********************************************************\n";
-    rt += "Server Name\tServer Ip\tServer Port\tClient Port\tDirectly Connected\tHops\n";
+    int s = 12;
+    
+    string rt = "";
+    rt += setwidthto("ServerName",s) + setwidthto("ServerIp",s)+ setwidthto("ServerPort",s)+setwidthto("ClientPort",s) + setwidthto("DirConn",s) + setwidthto("Hops",s) + '\n';
 
     for(int i=0 ; i<_Client_Port.size() ; i++)
     {
-        rt += _Server_Name[i] + "\t" + _Server_IP[i] + "\t" + _Server_Port[i] + "\t" + _Client_Port[i] + "\t" + to_string(_Directly_Connected[i]) + "\t" + to_string(_Hops[i]) + "\n" ;
+        rt += setwidthto(_Server_Name[i],s) + setwidthto(_Server_IP[i],s)+ setwidthto(_Server_Port[i],s) + setwidthto(_Client_Port[i],s) + setwidthto(to_string(_Directly_Connected[i]),s)+ setwidthto(to_string(_Hops[i]),s) + "\n" ;
     }
 
-    rt += "********************************************************\n";
+    rt += "\n********************************************************\n";
 
     return rt ;
 }
@@ -132,6 +148,7 @@ string RoutingTable::Get_ServerName_From_Port(int port)
         if(port == _Perm_Server_Port[i])
             return _Perm_Server_Name[i] ;
     }
+
 
     cout << "CRITICAL SYSTEM FAILURE1\n" ;
     exit(1) ;
