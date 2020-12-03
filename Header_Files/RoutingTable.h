@@ -16,6 +16,7 @@ class RoutingTable
         vector<string> _Server_Port ;
         vector<string> _Server_Name ;
         vector<bool> _Directly_Connected ;
+        vector<int> _Hops ;
 
         //This is For the Proxy Server, It Tells The Proxy Server about the Server Port on Which The CLient Exists since The Port for Server is different in case of ProxyServer and Clients
         vector<int> _Clients_Server_Port ;

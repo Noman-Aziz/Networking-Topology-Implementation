@@ -24,6 +24,11 @@ void RoutingTable::Add_To_Routing_Table(string data, bool directlycon, int CServ
 
     _Directly_Connected.push_back(directlycon);
 
+    if(directlycon)
+        _Hops.push_back(0) ;
+    else
+        _Hops.push_back(2) ;    
+
     _Clients_Server_Port.push_back(CServerPort) ;
 
     bool already = false;
@@ -64,6 +69,9 @@ void RoutingTable::Delete_From_Routing_Table(string port)
             auto itr6 = _Server_Name.begin() + i ;
             _Server_Name.erase(itr6) ;
 
+            auto itr7 = _Hops.begin() + i ;
+            _Hops.erase(itr7) ;
+
             break;
         }
     }
@@ -72,11 +80,11 @@ void RoutingTable::Delete_From_Routing_Table(string port)
 string RoutingTable::Get_RoutingTable()
 {
     string rt = "\n********************************************************\n";
-    rt += "Server Name\tServer Ip\tServer Port\tClient Port\tDirectly Connected\n";
+    rt += "Server Name\tServer Ip\tServer Port\tClient Port\tDirectly Connected\tHops\n";
 
     for(int i=0 ; i<_Client_Port.size() ; i++)
     {
-        rt += _Server_Name[i] + "\t" + _Server_IP[i] + "\t" + _Server_Port[i] + "\t" + _Client_Port[i] + "\t" + to_string(_Directly_Connected[i]) + "\n" ;
+        rt += _Server_Name[i] + "\t" + _Server_IP[i] + "\t" + _Server_Port[i] + "\t" + _Client_Port[i] + "\t" + to_string(_Directly_Connected[i]) + "\t" + to_string(_Hops[i]) + "\n" ;
     }
 
     rt += "********************************************************\n";

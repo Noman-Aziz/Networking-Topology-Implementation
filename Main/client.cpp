@@ -132,7 +132,7 @@ void * Receive_Messages(void * args)
             ss >> temp ;
 
             while(ss >> temp)
-                cout << temp ;
+                cout << temp << " ";
             cout << endl ;
         }
 
@@ -199,7 +199,7 @@ void Send_Messages()
             while(!Closed){
                 
                 string msg;
-                cout << "Enter Message to Send To Client " << Dport << " : " ;
+                cout << "Enter Message to Send To Client " << Dport << " ('closed' to stop): " ;
                 getline(cin, msg);
 
                 msg = base_code + " " + msg;

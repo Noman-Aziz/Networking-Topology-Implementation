@@ -12,7 +12,7 @@ bool Connection_Occupied = false ;
 int Connection_Occupied_By = 0;
 bool Internally_Connected = false ;
 string Server_Letter ;
-int DNS_Server_Port ;
+int DNS_Server_Port = 0 ;
 
 Client *C;
 RoutingTable R;
@@ -179,7 +179,7 @@ void *Rec_From_Proxy_Server(void *args)
         if (message[0] == '0')
         {
             R.Add_To_Routing_Table(message.erase(0, 1), false);
-            cout << "Received Broadcase Message from ProxyServer\nAdded an Entry to Routing Table : " << message << "\n";
+            cout << "Received Broadcase Message from ProxyServer\nAdded an Entry to Routing Table : " <<  "(Server_Name Client_Port Server_IP Server_Port) " << message << "\n";
         }
 
         //Broadcast Receive From Routing Table
@@ -196,15 +196,17 @@ void *Rec_From_Proxy_Server(void *args)
 
             //To Do this i will check whether destination port is in directly connected client or not
             string temp = message;
-            temp.erase(0,1) ;
             string dport ;
-            stringstream ss(temp) ;
-            ss >> dport ;
             int d_fd;
             
             //scenario 1 (it is for directly connected client)
-            if(R.Is_Directly_Connected(dport))
+            if(message[1] == 'R')
             {
+                //removing extra R from message
+                temp.erase(0,2) ;
+                stringstream ss(temp) ;
+                ss >> dport ;
+
                 cout << "Received Message from ProxyServer of Dns Request to Forward to Client " << dport << "\n";
                 
                 //Forward Message To Appropiate Connected Client Port
@@ -212,8 +214,12 @@ void *Rec_From_Proxy_Server(void *args)
             }
 
             //scenario 2 (i am s4, so forward to dns server)
-            else
+            else if (message[1] != 'R')
             {
+                temp.erase(0,1) ;
+                stringstream ss(temp) ;
+                ss >> dport ;
+
                 cout << "Received Message of Client " << dport << " through ProxyServer to Send To Dns Server\n" ;
 
                 //Forward Message To Appropiate Connected Client Port
@@ -294,6 +300,8 @@ void Check_Response_Type(string response, int Temp_sd, int index)
         cout << "Client IP(" << S->Get_Client_IP(index) << ") Port(" << S->Get_Client_Port(index) << ") Has Requested for RoutingTable\n";
 
         string message = R.Get_RoutingTable();
+        message += "Your Port : " + to_string(S->Get_Client_Port(index)) ;
+        message += "\n********************************************************\n";
 
         S->Send(message, Temp_sd);
     }
@@ -396,7 +404,7 @@ void Check_Response_Type(string response, int Temp_sd, int index)
     }
 
     //DNS Server Active Msg
-    else if(Does_Exist(response,"DNS SERVER"))
+    else if(response=="DNS SERVER")
     {
         DNS_Server_Port = S->Get_Client_Port(index) ;
         Delete_From_Routing_Table(index) ;
@@ -407,25 +415,62 @@ void Check_Response_Type(string response, int Temp_sd, int index)
     {
         cout << "Client IP(" << S->Get_Client_IP(index) << ") Port(" << S->Get_Client_Port(index) << ") Has Requested Ip Address of a Website From DNS Server\n";
 
-        //Preparing The Message Format
-        response.erase(0,1) ;
-        response = "3" + to_string(S->Get_Client_Port(index)) + " " + response ;
+        if(DNS_Server_Port == 0)
+        {
+            //Preparing The Message Format
+            response.erase(0,1) ;
+            response = "3" + to_string(S->Get_Client_Port(index)) + " " + response ;
 
-        C->Send(response) ;
+            C->Send(response) ;
+        }
+
+        //Scenario 4 (I am Server 4 : Received Message From Client to Send to DNS Server)
+        else
+        {
+            cout << "Forwarding Request to Dns Server\n" ;
+
+            //Preparing The Message Format
+            response.erase(0,1) ;
+            response = "3" + to_string(S->Get_Client_Port(index)) + " " + response ;
+
+            //Forward Message To Appropiate Connected Client Port
+            int d_fd = S->Get_Fd_By_Port(DNS_Server_Port) ;
+            assert(d_fd != -1) ;
+            S->Send(response, d_fd) ;
+        }
     }
 
     //Scenario 3 DNS (Message Received From DNS Server)
     else if(response[0] == '3' && response[1] == 'R')
     {
-        cout << "A Query Response From DNS Server Received To Forward to ProxyServer" ;
+        //Checking Whether This was Intended For Directly Connected CLient
+        string temp = response;
+        string dport ;
+        int d_fd;
 
-        C->Send(response) ;
+        temp.erase(0,2) ;
+        stringstream ss(temp) ;
+        ss >> dport ;
+
+        if(R.Is_Directly_Connected(dport))
+        {
+            cout << "A Query Response From DNS Server Received To Forward to Client " << dport << "\n" ;
+
+            //Forward Message To Appropiate Connected Client Port
+            d_fd = S->Get_Fd_By_Port(atoi(dport.c_str())) ;            
+
+            assert(d_fd != -1) ;
+            S->Send(response, d_fd) ;
+       }
+
+        else
+        {
+            cout << "A Query Response From DNS Server Received To Forward to ProxyServer\n" ;
+
+            C->Send(response) ;
+        }
     }
 
-    //Scenario 4 (I am Server 4 : Received Message From Client to Send to DNS Server)
-    //{
-
-    //}
 }
 
 void Wait_For_Connection()

@@ -24,9 +24,18 @@ int main(){
     sleep(1) ;
     cout << "DNS SERVER IS ACTIVE\n\n" ;
 
+    bool first_msg = false ;
+
     for(;;){
 
         string msg = DNS_CLIENT->Receive();
+
+        if(!first_msg)
+        {
+            first_msg = true ;
+            cout << "Server 4 Connection Response : " << msg << "\n" ;
+            continue ;
+        }
 
         //seperate query from message
         string query , cport ;
