@@ -407,7 +407,7 @@ void Check_Response_Type(string response, int Temp_sd, int index)
     else if(response=="DNS SERVER")
     {
         DNS_Server_Port = S->Get_Client_Port(index) ;
-        Delete_From_Routing_Table(index) ;
+        cout << "Server is Connected to DNS Server\n" ;
     }
 
     //Request From DNS Server
@@ -478,6 +478,7 @@ void Wait_For_Connection()
     int Temp_sd;
     string response, message;
     int max_clients = S->Get_Max_Clients();
+    bool dns_connect = false ;
 
     int ret_val;
 
@@ -493,7 +494,14 @@ void Wait_For_Connection()
         //new client has been connected so add it to routing table
         if (ret_val == 0)
         {
-            Add_To_Routing_Table();
+            //For DNS SERVER CONNECTION TO SERVER 4 , DO NOT ADD IT TO ROUTING TABLE
+            if(!dns_connect && Server_Letter == "4")
+            {
+                dns_connect = true ;
+            }
+    
+            else
+                Add_To_Routing_Table();
         }
 
         //Timeout Occured on Select
