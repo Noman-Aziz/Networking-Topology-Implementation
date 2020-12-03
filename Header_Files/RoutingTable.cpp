@@ -8,6 +8,10 @@ void RoutingTable::Add_To_Routing_Table(string data, bool directlycon, int CServ
     istringstream ss(data);
 
     string temp;
+    string name ;
+
+    ss >> name ;
+    _Server_Name.push_back(name);
 
     ss >> temp ;
     _Client_Port.push_back(temp);
@@ -20,7 +24,25 @@ void RoutingTable::Add_To_Routing_Table(string data, bool directlycon, int CServ
 
     _Directly_Connected.push_back(directlycon);
 
+    if(directlycon)
+        _Hops.push_back(0) ;
+    else
+        _Hops.push_back(2) ;    
+
     _Clients_Server_Port.push_back(CServerPort) ;
+
+    bool already = false;
+    for(int i=0 ; i<_Perm_Server_Port.size() ; i++ )
+    {
+        if(CServerPort == _Perm_Server_Port[i])
+            already = true ;
+    }
+
+    if(!already)
+    {
+        _Perm_Server_Port.push_back(CServerPort) ;
+        _Perm_Server_Name.push_back(name) ;
+    }
 }
 
 void RoutingTable::Delete_From_Routing_Table(string port)
@@ -44,6 +66,12 @@ void RoutingTable::Delete_From_Routing_Table(string port)
             auto itr5 = _Clients_Server_Port.begin() + i ;
             _Clients_Server_Port.erase(itr5) ;
 
+            auto itr6 = _Server_Name.begin() + i ;
+            _Server_Name.erase(itr6) ;
+
+            auto itr7 = _Hops.begin() + i ;
+            _Hops.erase(itr7) ;
+
             break;
         }
     }
@@ -52,11 +80,11 @@ void RoutingTable::Delete_From_Routing_Table(string port)
 string RoutingTable::Get_RoutingTable()
 {
     string rt = "\n********************************************************\n";
-    rt += "Client Port\tServer Ip\tServer Port\tDirectly Connected\n";
+    rt += "Server Name\tServer Ip\tServer Port\tClient Port\tDirectly Connected\tHops\n";
 
     for(int i=0 ; i<_Client_Port.size() ; i++)
     {
-        rt += _Client_Port[i] + "\t" + _Server_IP[i] + "\t" + _Server_Port[i] + to_string(_Directly_Connected[i]) + "\n" ;
+        rt += _Server_Name[i] + "\t" + _Server_IP[i] + "\t" + _Server_Port[i] + "\t" + _Client_Port[i] + "\t" + to_string(_Directly_Connected[i]) + "\t" + to_string(_Hops[i]) + "\n" ;
     }
 
     rt += "********************************************************\n";
@@ -95,4 +123,28 @@ int RoutingTable::Get_ProxyServer_Client_Port(string dport)
     }
 
     return -1 ;
+}
+
+string RoutingTable::Get_ServerName_From_Port(int port)
+{
+    for(int i=0 ; i<_Perm_Server_Name.size() ; i++)
+    {
+        if(port == _Perm_Server_Port[i])
+            return _Perm_Server_Name[i] ;
+    }
+
+    cout << "CRITICAL SYSTEM FAILURE1\n" ;
+    exit(1) ;
+}
+
+int RoutingTable::Get_ServerPort_From_Name(string name)
+{
+    for(int i=0 ; i<_Perm_Server_Port.size() ; i++)
+    {
+        if(name == _Perm_Server_Name[i])
+            return _Perm_Server_Port[i];
+    }
+
+    cout << "CRITICAL SYSTEM FAILURE2\n" ;
+    exit(1) ;
 }

@@ -9,6 +9,7 @@ void Send_Broadcast_Message(Server *, string, int);
 void Send_Client_Message(Server *, string, int, RoutingTable *, int &, bool);
 void Send_Con_Occupied_Msg(Server *, string, int) ;
 bool Does_Exist(string, string);
+string Dns_Resolver(string, vector<string>&, vector<string>&) ;
 
 int main()
 {
@@ -24,6 +25,9 @@ int main()
     int Connection_Occupied_By = 0 ;
     int Connection_Occupied_By_Server = 0 ;
     int Connection_Occupied_By_Server_2 = 0 ;
+    int Requesting_Dns_Server_Port = 0 ;
+    vector<string> Dns_Server ;
+    vector<string> Dns_Ip ;
 
     while(1)
     {
@@ -39,12 +43,6 @@ int main()
                 response = S->Receive(Temp_sd, i) ;
                 int client_port = S->Get_Client_Port(i) ;
 
-                //only one message and response with one client
-                //if(response == "exit")
-                //    continue;
-
-                //cout << response << endl;
-
                 //Checking Message Type and Acting Accordingly
 
                 //Broadcast Add to RoutingTable Message
@@ -56,7 +54,7 @@ int main()
                     //Add to Own Routing Table
                     R.Add_To_Routing_Table(response.erase(0,1), false, client_port);
 
-                    cout << "Received Broadcast Message From Server " << client_port << " To Add To RoutingTable : (Client_Port Server_IP Server_Port) " << response << "\n" ;
+                    cout << "Received Broadcast Message From Server " << R.Get_ServerName_From_Port(client_port) << " To Add To RoutingTable : (Server_Name Client_Port Server_IP Server_Port) " << response << "\n" ;
                 }
 
                 //Broadcast Delete From RoutingTable Message
@@ -68,22 +66,80 @@ int main()
                     //Delete from Own Routing Table
                     R.Delete_From_Routing_Table(response.erase(0,1));
                 
-                    cout << "Received Broadcast Message From Server " << client_port << " To Delete From RoutingTable : " << response << "\n" ;
+                    cout << "Received Broadcast Message From Server " << R.Get_ServerName_From_Port(client_port) << " To Delete From RoutingTable : (Client_Port) " << response << "\n" ;
+                }
+
+                //Dns Server Request
+                else if (response[0] == '3' && response[1] != 'R')
+                {
+                    cout << "Received Dns Request Message From Server " << R.Get_ServerName_From_Port(client_port) << "\n" ;
+
+                    //seperate query from message
+                    string query , cport ;
+                    string temp = response ;
+                    stringstream ss(temp.erase(0,1)) ;
+                    ss >> cport ;
+                    ss >> query ;
+
+                    //Check Self Dns Cache (FOUND)
+                    string ip = Dns_Resolver(query, Dns_Server, Dns_Ip) ;
+                    if(ip != " ")
+                    {
+                        cout << "Found Dns Response in Dns Cache, Replying Back Request\n" ;
+                        string res = "3R" + cport + " " + query + ":" + ip + " Replied by ProxyServer" ;
+                        S->Send(res, S->Get_Fd_By_Port(client_port)) ;
+                    }
+
+                    //(NOT FOUND) Forward to Server 4
+                    else
+                    {
+                        cout << "Did Not Found Dns Response in Dns Cache, Forwarding it To Server 4\n" ;
+                        Requesting_Dns_Server_Port = client_port ;
+                        S->Send(response, S->Get_Fd_By_Port(R.Get_ServerPort_From_Name("4"))) ;                        
+                    }
+                }
+
+                //Dns Server Response
+                else if (response[0] == '3' && response[1] == 'R')
+                {
+                    cout << "Received Dns Request Response From Server " << R.Get_ServerName_From_Port(client_port) << "\n" ;
+
+                    assert(Requesting_Dns_Server_Port != 0) ;
+
+                    cout << "Forwarding it to Server " << R.Get_ServerName_From_Port(Requesting_Dns_Server_Port) << " and Adding the Response into Own Dns Cache\n" ;
+
+                    //Add to Self Dns Cache
+                    string temp = response;
+                    temp.erase(0,2) ;
+                    string addr,ip ;
+                    stringstream ss(temp) ;
+                    ss >> addr ;
+                    ss >> addr ;
+                    ss >> ip ;
+                    ss >> ip ;
+                    Dns_Server.push_back(addr) ;
+                    Dns_Ip.push_back(ip) ;
+
+                    //Forward to Requesting Server
+                    S->Send(response, S->Get_Fd_By_Port(Requesting_Dns_Server_Port)) ;
+                    Requesting_Dns_Server_Port = 0 ;
                 }
 
                 //Forward A Client Message To Any Client Via Server
                 else if (response[0] == '2')
                 {
-                    cout << "Received a Client Message From Server " << client_port << " To Forward to Server \n" ;//<< response << "\n" ;
+                    cout << "Received a Client Message From Server " << R.Get_ServerName_From_Port(client_port) << " To Forward" ;//<< response << "\n" ;
 
                     if( Connection_Occupied && client_port != Connection_Occupied_By_Server && client_port != Connection_Occupied_By_Server_2 )
                     {
                         Send_Con_Occupied_Msg(S, response, Connection_Occupied_By) ;
-                        cout << "Link was Occupied by Client " << Connection_Occupied_By << ", Therefore, Denied That Request\n" ;
+                        cout << " But\nLink was Occupied by Client " << Connection_Occupied_By << ", Therefore, Denied That Request\n" ;
                     }
 
                     else
                     {
+                        cout << " to Server " ;
+
                         if(!Connection_Occupied)
                         {
                             Connection_Occupied = true ;
@@ -112,7 +168,6 @@ int main()
                         Send_Client_Message(S, response, i, &R, Connection_Occupied_By_Server_2, false) ;
                     }
                 }
-                //S->Send(message, Temp_sd);
 
                 continue;
             }
@@ -139,6 +194,19 @@ Server *Setup_Server_Connection()
     S->Listen(3);
 
     return S;
+}
+
+string Dns_Resolver(string query, vector<string> & Dns_Server, vector<string> & Dns_Ip)
+{
+    for(int i=0 ; i<Dns_Ip.size() ; i++)
+    {
+        if(query == Dns_Server[i])
+        {
+            return Dns_Ip[i] ;
+        }
+    }
+
+    return " " ;
 }
 
 void Send_Broadcast_Message(Server * S, string message, int Sender_Index)
@@ -198,19 +266,9 @@ void Send_Client_Message(Server * S, string message, int Sender_Index, RoutingTa
     if(Update)
         Server2 = Sdport ;
 
-    for(int i=0 ; i<max_clients ; i++)
-    {
-        if (i == Sender_Index)
-            continue;
+    cout << R->Get_ServerName_From_Port(Sdport) << "\n" ;
 
-        Temp_sd = S->Get_Client_FD(i) ;
-
-        if (Temp_sd == S->Get_Fd_By_Port(Sdport))
-        {                 
-            S->Send(message, Temp_sd);
-            return ;
-        }
-    }
+    S->Send(message, S->Get_Fd_By_Port(Sdport));
 }
 
 bool Does_Exist(string str1, string str2)
